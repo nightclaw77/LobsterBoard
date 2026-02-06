@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LobsterBoard - Dashboard Builder</title>
+  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <link rel="stylesheet" href="css/builder.css">
+</head>
+<body>
+  <!-- Header -->
+  <header class="builder-header">
+    <div class="header-left">
+      <img src="lobsterboard-logo-final.png" alt="LobsterBoard" class="logo-img">
+    </div>
+    <div class="header-center">
+      <label>Canvas Size:</label>
+      <select id="canvas-size">
+        <optgroup label="Standard Displays">
+          <option value="1920x1080" selected>1920×1080 (1080p)</option>
+          <option value="2560x1440">2560×1440 (1440p)</option>
+          <option value="3840x2160">3840×2160 (4K)</option>
+          <option value="1280x720">1280×720 (720p)</option>
+        </optgroup>
+        <optgroup label="Laptops">
+          <option value="1366x768">1366×768 (Common Laptop)</option>
+          <option value="1536x864">1536×864 (Laptop)</option>
+          <option value="1440x900">1440×900 (MacBook)</option>
+        </optgroup>
+        <optgroup label="Tablets & Small">
+          <option value="1280x800">1280×800 (10" Tablet)</option>
+          <option value="1024x768">1024×768 (iPad/Small)</option>
+          <option value="1024x600">1024×600 (10" Netbook)</option>
+          <option value="800x480">800×480 (7" Display)</option>
+        </optgroup>
+        <optgroup label="Ultrawide">
+          <option value="2560x1080">2560×1080 (Ultrawide)</option>
+          <option value="3440x1440">3440×1440 (Ultrawide QHD)</option>
+        </optgroup>
+        <optgroup label="Portrait Mode">
+          <option value="1080x1920">1080×1920 (Portrait 1080p)</option>
+          <option value="768x1024">768×1024 (Portrait Tablet)</option>
+        </optgroup>
+        <option value="custom">Custom...</option>
+      </select>
+      <input type="number" id="custom-width" placeholder="Width" style="display:none; width:80px;">
+      <span id="custom-x" style="display:none;">×</span>
+      <input type="number" id="custom-height" placeholder="Height" style="display:none; width:80px;">
+    </div>
+    <div class="header-right">
+      <button class="btn btn-secondary" id="btn-clear">Clear All</button>
+      <button class="btn btn-secondary" id="btn-preview">Preview</button>
+      <button class="btn btn-primary" id="btn-export">📦 Export ZIP</button>
+    </div>
+  </header>
+
+  <div class="builder-main">
+    <!-- Widget Library Panel -->
+    <aside class="widget-panel">
+      <h3>📦 Widgets</h3>
+
+      <div class="widget-sections">
+      <!-- AI / LLM -->
+      <div class="widget-section">
+        <h4>🤖 AI / LLM</h4>
+        <div class="widget-list">
+          <div class="widget-item" draggable="true" data-widget="ai-usage-claude">
+            <span class="widget-icon">🟣</span>
+            <span class="widget-name">Claude Usage</span>
+          </div>
+          <div class="widget-item" draggable="true" data-widget="ai-usage-openai">
+            <span class="widget-icon">🟢</span>
+            <span class="widget-name">GPT Usage</span>
+          </div>
+          <div class="widget-item" draggable="true" data-widget="ai-usage-gemini">
+            <span class="widget-icon">🔵</span>
+            <span class="widget-name">Gemini Usage</span>
+          </div>
+          <div class="widget-item" draggable="true" data-widget="ai-usage-multi">
+            <span class="widget-icon">🤖</span>
+            <span class="widget-name">AI Usage (All)</span>
+          </div>
+          <div class="widget-item" draggable="true" data-widget="ai-cost-tracker">
+            <span class="widget-icon">💰</span>
+            <span class="widget-name">Cost Tracker</span>
+          </div>
+          <div class="widget-item" draggable="true" data-widget="api-status">
+            <span class="widget-icon">🔄</span>
+            <span class="widget-name">API Status</span>
+          </div>
+          <div class="widget-item" draggable="true" data-widget="session-count">
+            <span class="widget-icon">💬</span>
+            <span class="widget-name">Active Sessions</span>
+          </div>
+          <div class="widget-item" draggable="true" data-widget="token-gauge">
+            <span class="widget-icon">📊</span>
+            <span class="widget-name">Token Gauge</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Basics -->
+      <div class="widget-section">
+        <h4>📌 Basics</h4>
+        <div class="widget-list">
+          <div class="widget-item" draggable="true" data-widget="weather">
+            <span class="widget-icon">🌡️</span>
+            <span class="widget-name">Local Weather</span>
+          </div>
+          <div class="widget-item" draggable="true" data-widget="weather-multi">
+            <span class="widget-icon">🌍</span>
+            <span class="widget-name">World Weather</span>
+          </div>
+          <div class="widget-item" draggable="true" data-widget="clock">
+            <span class="widget-icon">🕐</span>
+            <span class="widget-name">Clock</span>
+          </div>
+          <div class="widget-item" draggable="true" data-widget="world-clock">
+            <span class="widget-icon">🌍</span>
+            <span class="widget-name">World Clock</span>
+          </div>
+          <div class="widget-item" draggable="true" data-widget="countdown">
+            <span class="widget-icon">⏳</span>
+            <span class="widget-name">Countdown</span>
+          </div>
+          <div class="widget-item" draggable="true" data-widget="stat-card">
+            <span class="widget-icon">📊</span>
+            <span class="widget-name">Stat Card</span>
+          </div>
+          <div class="widget-item" draggable="true" data-widget="battery-status">
+            <span class="widget-icon">🔋</span>
+            <span class="widget-name">Battery</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- System Monitoring -->
+      <div class="widget-section">
+        <h4>💻 System</h4>
+        <div class="widget-list">
+          <div class="widget-item" draggable="true" data-widget="cpu-memory">
+            <span class="widget-icon">💻</span>
+            <span class="widget-name">CPU / Memory</span>
+          </div>
+          <div class="widget-item" draggable="true" data-widget="disk-usage">
+            <span class="widget-icon">💾</span>
+            <span class="widget-name">Disk Usage</span>
+          </div>
+          <div class="widget-item" draggable="true" data-widget="network-speed">
+            <span class="widget-icon">🌐</span>
+            <span class="widget-name">Network Speed</span>
+          </div>
+          <div class="widget-item" draggable="true" data-widget="docker-containers">
+            <span class="widget-icon">🐳</span>
+            <span class="widget-name">Docker</span>
+          </div>
+          <div class="widget-item" draggable="true" data-widget="uptime-monitor">
+            <span class="widget-icon">📡</span>
+            <span class="widget-name">Uptime Monitor</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- OpenClaw -->
+      <div class="widget-section">
+        <h4>🐾 OpenClaw</h4>
+        <div class="widget-list">
+          <div class="widget-item" draggable="true" data-widget="auth-status">
+            <span class="widget-icon">🔐</span>
+            <span class="widget-name">Auth Status</span>
+          </div>
+          <div class="widget-item" draggable="true" data-widget="sleep-ring">
+            <span class="widget-icon">😴</span>
+            <span class="widget-name">Sleep Ring</span>
+          </div>
+          <div class="widget-item" draggable="true" data-widget="release">
+            <span class="widget-icon">📦</span>
+            <span class="widget-name">Release</span>
+          </div>
+          <div class="widget-item" draggable="true" data-widget="activity-list">
+            <span class="widget-icon">📋</span>
+            <span class="widget-name">Activity List</span>
+          </div>
+          <div class="widget-item" draggable="true" data-widget="cron-jobs">
+            <span class="widget-icon">⏰</span>
+            <span class="widget-name">Cron Jobs</span>
+          </div>
+          <div class="widget-item" draggable="true" data-widget="system-log">
+            <span class="widget-icon">🔧</span>
+            <span class="widget-name">System Log</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Productivity -->
+      <div class="widget-section">
+        <h4>📋 Productivity</h4>
+        <div class="widget-list">
+          <div class="widget-item" draggable="true" data-widget="todo-list">
+            <span class="widget-icon">✅</span>
+            <span class="widget-name">Todo List</span>
+          </div>
+          <div class="widget-item" draggable="true" data-widget="calendar">
+            <span class="widget-icon">📅</span>
+            <span class="widget-name">Calendar</span>
+          </div>
+          <div class="widget-item" draggable="true" data-widget="email-count">
+            <span class="widget-icon">📧</span>
+            <span class="widget-name">Unread Emails</span>
+          </div>
+          <div class="widget-item" draggable="true" data-widget="pomodoro">
+            <span class="widget-icon">🎯</span>
+            <span class="widget-name">Pomodoro</span>
+          </div>
+          <div class="widget-item" draggable="true" data-widget="notes">
+            <span class="widget-icon">📝</span>
+            <span class="widget-name">Notes</span>
+          </div>
+          <div class="widget-item" draggable="true" data-widget="github-stats">
+            <span class="widget-icon">🐙</span>
+            <span class="widget-name">GitHub Stats</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Finance -->
+      <div class="widget-section">
+        <h4>💵 Finance</h4>
+        <div class="widget-list">
+          <div class="widget-item" draggable="true" data-widget="stock-ticker">
+            <span class="widget-icon">📈</span>
+            <span class="widget-name">Stock Ticker</span>
+          </div>
+          <div class="widget-item" draggable="true" data-widget="crypto-price">
+            <span class="widget-icon">₿</span>
+            <span class="widget-name">Crypto Price</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Smart Home -->
+      <div class="widget-section">
+        <h4>🏠 Smart Home</h4>
+        <div class="widget-list">
+          <div class="widget-item" draggable="true" data-widget="indoor-climate">
+            <span class="widget-icon">🏠</span>
+            <span class="widget-name">Indoor Climate</span>
+          </div>
+          <div class="widget-item" draggable="true" data-widget="camera-feed">
+            <span class="widget-icon">📷</span>
+            <span class="widget-name">Camera Feed</span>
+          </div>
+          <div class="widget-item" draggable="true" data-widget="power-usage">
+            <span class="widget-icon">🔌</span>
+            <span class="widget-name">Power Usage</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Entertainment -->
+      <div class="widget-section">
+        <h4>🎵 Entertainment</h4>
+        <div class="widget-list">
+          <div class="widget-item" draggable="true" data-widget="now-playing">
+            <span class="widget-icon">🎵</span>
+            <span class="widget-name">Now Playing</span>
+          </div>
+          <div class="widget-item" draggable="true" data-widget="quote-of-day">
+            <span class="widget-icon">💭</span>
+            <span class="widget-name">Quote of Day</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Content -->
+      <div class="widget-section">
+        <h4>🔗 Content</h4>
+        <div class="widget-list">
+          <div class="widget-item" draggable="true" data-widget="quick-links">
+            <span class="widget-icon">🔗</span>
+            <span class="widget-name">Quick Links</span>
+          </div>
+          <div class="widget-item" draggable="true" data-widget="rss-feed">
+            <span class="widget-icon">📡</span>
+            <span class="widget-name">RSS Feed</span>
+          </div>
+          <div class="widget-item" draggable="true" data-widget="image-embed">
+            <span class="widget-icon">🖼️</span>
+            <span class="widget-name">Image Embed</span>
+          </div>
+          <div class="widget-item" draggable="true" data-widget="iframe-embed">
+            <span class="widget-icon">🌐</span>
+            <span class="widget-name">Iframe Embed</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bars -->
+      <div class="widget-section">
+        <h4>📊 Bars</h4>
+        <div class="widget-list">
+          <div class="widget-item" draggable="true" data-widget="topbar">
+            <span class="widget-icon">🔝</span>
+            <span class="widget-name">Top Nav Bar</span>
+          </div>
+          <div class="widget-item" draggable="true" data-widget="news-ticker">
+            <span class="widget-icon">📰</span>
+            <span class="widget-name">News Ticker</span>
+          </div>
+          <div class="widget-item" draggable="true" data-widget="rss-ticker">
+            <span class="widget-icon">📜</span>
+            <span class="widget-name">RSS Ticker</span>
+          </div>
+        </div>
+      </div>
+      </div><!-- end widget-sections -->
+
+      <!-- Mascot at bottom of sidebar -->
+      <div class="sidebar-mascot">
+        <img src="lobsterboard-mascot-clean.png" alt="LobsterBoard">
+      </div>
+    </aside>
+
+    <!-- Canvas Area -->
+    <main class="canvas-area">
+      <div class="canvas-wrapper" id="canvas-wrapper">
+        <div class="canvas" id="canvas" data-width="1920" data-height="1080" style="width:1920px;height:1080px;">
+          <div class="canvas-grid"></div>
+          <div class="drop-hint">Drag widgets here</div>
+        </div>
+      </div>
+      <div class="canvas-info">
+        <span id="canvas-dimensions">1920 × 1080</span>
+        <span id="widget-count">0 widgets</span>
+        <div class="zoom-controls" style="display:flex;align-items:center;gap:6px;">
+          <button onclick="zoomOut()" style="background:none;border:none;color:#8b949e;font-size:16px;cursor:pointer;padding:4px 8px;" title="Zoom Out">-</button>
+          <span id="zoom-level" style="color:#8b949e;font-size:12px;min-width:40px;text-align:center;">50%</span>
+          <button onclick="zoomIn()" style="background:none;border:none;color:#8b949e;font-size:16px;cursor:pointer;padding:4px 8px;" title="Zoom In">+</button>
+          <button onclick="zoomFit()" style="background:none;border:none;color:#8b949e;font-size:14px;cursor:pointer;padding:4px 8px;" title="Fit to Screen">⊡</button>
+          <button onclick="zoom100()" style="background:none;border:none;color:#8b949e;font-size:11px;cursor:pointer;padding:4px 8px;" title="100%">1:1</button>
+        </div>
+      </div>
+    </main>
+
+    <!-- Properties Panel -->
+    <aside class="properties-panel" id="properties-panel">
+      <h3>⚙️ Properties</h3>
+      <div class="no-selection">
+        <p>Select a widget to edit its properties</p>
+      </div>
+      <div class="properties-form" id="properties-form" style="display:none;">
+        <div class="prop-group">
+          <label>Widget Type</label>
+          <input type="text" id="prop-type" readonly>
+        </div>
+        <div class="prop-group">
+          <label>Title</label>
+          <input type="text" id="prop-title" placeholder="Widget title">
+        </div>
+        <div class="prop-group">
+          <label>Position</label>
+          <div class="prop-row">
+            <input type="number" id="prop-x" placeholder="X">
+            <input type="number" id="prop-y" placeholder="Y">
+          </div>
+        </div>
+        <div class="prop-group">
+          <label>Size</label>
+          <div class="prop-row">
+            <input type="number" id="prop-width" placeholder="W">
+            <input type="number" id="prop-height" placeholder="H">
+          </div>
+        </div>
+        <div class="prop-group" id="prop-location-group" style="display:none;">
+          <label>Location</label>
+          <input type="text" id="prop-location" placeholder="City name">
+        </div>
+        <div class="prop-group" id="prop-locations-group" style="display:none;">
+          <label>Locations</label>
+          <input type="text" id="prop-locations" placeholder="New York, London, Tokyo">
+          <small>Comma-separated city names</small>
+        </div>
+        <div class="prop-group" id="prop-units-group" style="display:none;">
+          <label>Units</label>
+          <select id="prop-units">
+            <option value="F">Fahrenheit (°F)</option>
+            <option value="C">Celsius (°C)</option>
+          </select>
+        </div>
+        <div class="prop-group" id="prop-api-group" style="display:none;">
+          <label>API Key Variable</label>
+          <input type="text" id="prop-api-key" readonly style="color:#8b949e;cursor:default;">
+          <small>Users add their own key after export</small>
+        </div>
+        <div class="prop-group" id="prop-endpoint-group" style="display:none;">
+          <label>API Endpoint</label>
+          <input type="text" id="prop-endpoint" placeholder="https://api.example.com">
+        </div>
+        <div class="prop-group">
+          <label>Refresh Interval (sec)</label>
+          <input type="number" id="prop-refresh" placeholder="60" min="0">
+        </div>
+        <hr>
+        <button class="btn btn-danger btn-sm" id="btn-delete-widget" onclick="if(state.selectedWidget) deleteWidget(state.selectedWidget.id)">🗑️ Delete Widget</button>
+      </div>
+    </aside>
+  </div>
+
+  <!-- Preview Modal -->
+  <div class="modal" id="preview-modal">
+    <div class="modal-content modal-fullscreen">
+      <div class="modal-header">
+        <h2>Preview</h2>
+        <button class="modal-close" id="close-preview">&times;</button>
+      </div>
+      <div class="modal-body">
+        <iframe id="preview-frame"></iframe>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/widgets.js"></script>
+  <script src="js/builder.js"></script>
+</body>
+</html>
