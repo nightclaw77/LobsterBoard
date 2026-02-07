@@ -17,6 +17,17 @@ const state = {
 };
 
 // ─────────────────────────────────────────────
+// HELPERS
+// ─────────────────────────────────────────────
+
+// Process widget HTML to conditionally remove header
+function processWidgetHtml(html, showHeader) {
+  if (showHeader !== false) return html;
+  // Remove the dash-card-head element
+  return html.replace(/<div class="dash-card-head">[\s\S]*?<\/div>\s*/i, '');
+}
+
+// ─────────────────────────────────────────────
 // INITIALIZATION
 // ─────────────────────────────────────────────
 
@@ -212,7 +223,7 @@ function renderWidget(widget) {
   
   // Generate actual widget HTML for realistic preview
   const props = { ...widget.properties, id: 'preview-' + widget.id };
-  const widgetContent = template.generateHtml(props);
+  const widgetContent = processWidgetHtml(template.generateHtml(props), widget.properties.showHeader);
   
   el.innerHTML = `
     <div class="widget-render">${widgetContent}</div>
@@ -238,6 +249,20 @@ function renderWidget(widget) {
   });
   
   canvas.appendChild(el);
+}
+
+function renderWidgetPreview(widget) {
+  const template = WIDGETS[widget.type];
+  const el = document.getElementById(widget.id);
+  if (!el) return;
+  
+  const props = { ...widget.properties, id: 'preview-' + widget.id };
+  const widgetContent = processWidgetHtml(template.generateHtml(props), widget.properties.showHeader);
+  
+  const renderDiv = el.querySelector('.widget-render');
+  if (renderDiv) {
+    renderDiv.innerHTML = widgetContent;
+  }
 }
 
 function selectWidget(id) {
@@ -369,6 +394,9 @@ function initProperties() {
   document.getElementById('prop-endpoint').addEventListener('input', onPropertyChange);
   document.getElementById('prop-refresh').addEventListener('change', onPropertyChange);
   
+  // Show header checkbox
+  document.getElementById('prop-show-header').addEventListener('change', onPropertyChange);
+  
   // Delete button
   document.getElementById('btn-delete-widget').addEventListener('click', () => {
     if (state.selectedWidget) {
@@ -385,6 +413,7 @@ function showProperties(widget) {
   
   document.getElementById('prop-type').value = template.name;
   document.getElementById('prop-title').value = widget.properties.title || '';
+  document.getElementById('prop-show-header').checked = widget.properties.showHeader !== false; // default true
   
   updatePropertyInputs();
   
@@ -467,6 +496,10 @@ function onPropertyChange(e) {
       break;
     case 'prop-title':
       widget.properties.title = e.target.value;
+      break;
+    case 'prop-show-header':
+      widget.properties.showHeader = e.target.checked;
+      renderWidgetPreview(widget);
       break;
     case 'prop-location':
       widget.properties.location = e.target.value;
@@ -597,7 +630,7 @@ function showPreview() {
     if (!template) return '';
     
     const props = { ...widget.properties, id: widget.id };
-    let html = template.generateHtml(props);
+    let html = processWidgetHtml(template.generateHtml(props), widget.properties.showHeader);
     
     return `
       <div class="widget-container" style="position:absolute;left:${widget.x}px;top:${widget.y}px;width:${widget.width}px;height:${widget.height}px;">
@@ -666,7 +699,7 @@ function generateDashboardHtml() {
     if (!template) return '';
     
     const props = { ...widget.properties, id: widget.id };
-    let html = template.generateHtml(props);
+    let html = processWidgetHtml(template.generateHtml(props), widget.properties.showHeader);
     
     // Wrap in positioned container
     return `
