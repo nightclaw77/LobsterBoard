@@ -367,7 +367,6 @@ const WIDGETS = {
   'clock': {
     name: 'Clock',
     icon: '🕐',
-    description: 'Simple digital clock. Supports 12h or 24h format.',
     category: 'small',
     description: 'Simple digital clock. Supports 12h or 24h format.',
     defaultWidth: 200,
@@ -1693,8 +1692,8 @@ const WIDGETS = {
           const res = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=${props.coin || 'bitcoin'}&vs_currencies=${props.currency || 'usd'}&include_24hr_change=true');
           const data = await res.json();
           const coin = data['${props.coin || 'bitcoin'}'];
-          document.getElementById('${props.id}-price').textContent = '$' + (coin.${props.currency || 'usd'} || 0).toLocaleString();
-          const change = coin.${props.currency || 'usd'}_24h_change?.toFixed(2) || 0;
+          document.getElementById('${props.id}-price').textContent = '$' + (coin['${props.currency || 'usd'}'] || 0).toLocaleString();
+          const change = coin['${props.currency || 'usd'}_24h_change']?.toFixed(2) || 0;
           const changeEl = document.getElementById('${props.id}-change');
           changeEl.textContent = (change >= 0 ? '+' : '') + change + '%';
           changeEl.className = 'crypto-change ' + (change >= 0 ? 'green' : 'red');

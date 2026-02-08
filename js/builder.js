@@ -4,6 +4,18 @@
  */
 
 // ─────────────────────────────────────────────
+// SECURITY HELPERS
+// ─────────────────────────────────────────────
+
+// Escape HTML to prevent XSS attacks
+function escapeHtml(str) {
+  if (!str) return '';
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+// ─────────────────────────────────────────────
 // STATE
 // ─────────────────────────────────────────────
 
@@ -657,8 +669,8 @@ function renderRandomImageList() {
   
   container.innerHTML = images.map((img, i) => `
     <div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--border);">
-      <img src="${img.data}" style="width:32px;height:32px;object-fit:cover;border-radius:4px;">
-      <span style="flex:1;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${img.name}</span>
+      <img src="${escapeHtml(img.data)}" style="width:32px;height:32px;object-fit:cover;border-radius:4px;">
+      <span style="flex:1;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(img.name)}</span>
       <button onclick="removeRandomImage(${i})" style="background:none;border:none;color:var(--accent-red);cursor:pointer;font-size:14px;" title="Remove">×</button>
     </div>
   `).join('');
@@ -712,11 +724,11 @@ function renderQuickLinksList() {
   container.innerHTML = links.map((link, i) => {
     let domain = '';
     try { domain = new URL(link.url).hostname; } catch(e) {}
-    const favicon = domain ? 'https://www.google.com/s2/favicons?sz=16&domain=' + domain : '';
+    const favicon = domain ? 'https://www.google.com/s2/favicons?sz=16&domain=' + encodeURIComponent(domain) : '';
     return `
     <div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--border);">
-      ${favicon ? `<img src="${favicon}" style="width:16px;height:16px;">` : ''}
-      <span style="flex:1;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${link.name}</span>
+      ${favicon ? `<img src="${escapeHtml(favicon)}" style="width:16px;height:16px;">` : ''}
+      <span style="flex:1;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(link.name)}</span>
       <button onclick="removeQuickLink(${i})" style="background:none;border:none;color:var(--accent-red);cursor:pointer;font-size:14px;" title="Remove">×</button>
     </div>
   `;

@@ -55,8 +55,12 @@ const MIME_TYPES = {
 async function proxyToOpenClaw(reqPath, res) {
   const url = OPENCLAW_URL + reqPath;
   
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 10000);
+  
   try {
-    const response = await fetch(url);
+    const response = await fetch(url, { signal: controller.signal });
+    clearTimeout(timeout);
     const data = await response.text();
     
     res.writeHead(response.status, {
@@ -65,6 +69,7 @@ async function proxyToOpenClaw(reqPath, res) {
     });
     res.end(data);
   } catch (error) {
+    clearTimeout(timeout);
     res.writeHead(502, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ error: 'Failed to reach OpenClaw', details: error.message }));
   }
@@ -75,7 +80,15 @@ function serveStatic(filePath, res) {
   // Default to index.html
   if (filePath === '/') filePath = '/index.html';
   
-  const fullPath = path.join(__dirname, filePath);
+  const fullPath = path.resolve(__dirname, '.' + filePath);
+  
+  // Prevent path traversal attacks
+  if (!fullPath.startsWith(path.resolve(__dirname))) {
+    res.writeHead(403, { 'Content-Type': 'text/plain' });
+    res.end('Forbidden');
+    return;
+  }
+  
   const ext = path.extname(fullPath).toLowerCase();
   const contentType = MIME_TYPES[ext] || 'application/octet-stream';
   

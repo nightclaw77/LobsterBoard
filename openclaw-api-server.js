@@ -212,7 +212,15 @@ const API_HANDLERS = {
 // Serve static files
 function serveStatic(filePath, res) {
   if (filePath === '/') filePath = '/index.html';
-  const fullPath = path.join(__dirname, filePath);
+  const fullPath = path.resolve(__dirname, '.' + filePath);
+  
+  // Prevent path traversal attacks
+  if (!fullPath.startsWith(path.resolve(__dirname))) {
+    res.writeHead(403);
+    res.end('Forbidden');
+    return;
+  }
+  
   const ext = path.extname(fullPath).toLowerCase();
   
   fs.readFile(fullPath, (err, data) => {
