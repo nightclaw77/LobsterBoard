@@ -168,7 +168,8 @@ const WIDGETS = {
       async function update_${props.id.replace(/-/g, '_')}() {
         try {
           const res = await fetch('${props.endpoint || '/api/status'}');
-          const data = await res.json();
+          const json = await res.json();
+          const data = json.data || json;
           const dot = document.getElementById('${props.id}-dot');
           const val = document.getElementById('${props.id}-value');
           val.textContent = data.authMode === 'oauth' ? 'Subscription' : 'API';
@@ -267,7 +268,8 @@ const WIDGETS = {
         try {
           // Get current running version from OpenClaw API
           const statusRes = await fetch(baseUrl + '/api/status');
-          const statusData = await statusRes.json();
+          const statusJson = await statusRes.json();
+          const statusData = statusJson.data || statusJson;
           const currentVersion = (statusData.version || '').replace(/^v/, '');
           
           // Get latest release from GitHub
@@ -450,13 +452,15 @@ const WIDGETS = {
       async function update_${props.id.replace(/-/g, '_')}() {
         try {
           const res = await fetch('${props.endpoint || '/api/activity'}');
-          const data = await res.json();
+          const json = await res.json();
+          const data = json.data || json;
           const list = document.getElementById('${props.id}-list');
           const badge = document.getElementById('${props.id}-badge');
-          list.innerHTML = data.items.slice(0, ${props.maxItems || 10}).map(item => 
+          const items = data.items || [];
+          list.innerHTML = items.slice(0, ${props.maxItems || 10}).map(item => 
             '<div class="list-item">' + item.text + '</div>'
           ).join('');
-          badge.textContent = data.items.length + ' items';
+          badge.textContent = items.length + ' items';
         } catch (e) {
           console.error('Activity list widget error:', e);
           document.getElementById('${props.id}-list').innerHTML = '<div class="list-item">—</div>';
@@ -502,13 +506,15 @@ const WIDGETS = {
       async function update_${props.id.replace(/-/g, '_')}() {
         try {
           const res = await fetch('${props.endpoint || '/api/cron'}');
-          const data = await res.json();
+          const json = await res.json();
+          const data = json.data || json;
           const list = document.getElementById('${props.id}-list');
           const badge = document.getElementById('${props.id}-badge');
-          list.innerHTML = data.jobs.map(job => 
+          const jobs = data.jobs || [];
+          list.innerHTML = jobs.map(job => 
             '<div class="cron-item"><span class="cron-name">' + job.name + '</span><span class="cron-next">' + job.next + '</span></div>'
           ).join('');
-          badge.textContent = data.jobs.length + ' jobs';
+          badge.textContent = jobs.length + ' jobs';
         } catch (e) {
           console.error('Cron jobs widget error:', e);
           document.getElementById('${props.id}-list').innerHTML = '<div class="cron-item"><span class="cron-name">—</span></div>';
@@ -558,13 +564,15 @@ const WIDGETS = {
       async function update_${props.id.replace(/-/g, '_')}() {
         try {
           const res = await fetch('${props.endpoint || '/api/logs'}');
-          const data = await res.json();
+          const json = await res.json();
+          const data = json.data || json;
           const log = document.getElementById('${props.id}-log');
           const badge = document.getElementById('${props.id}-badge');
-          log.innerHTML = data.lines.slice(-${props.maxLines || 50}).map(line => 
+          const lines = data.lines || [];
+          log.innerHTML = lines.slice(-${props.maxLines || 50}).map(line => 
             '<div class="log-line">' + line + '</div>'
           ).join('');
-          badge.textContent = data.lines.length + ' lines';
+          badge.textContent = lines.length + ' lines';
           log.scrollTop = log.scrollHeight;
         } catch (e) {
           console.error('System log widget error:', e);
@@ -771,7 +779,8 @@ const WIDGETS = {
           // Option 1: If using OpenClaw, it tracks usage locally
           // Option 2: Set up your own proxy endpoint
           const res = await fetch('/api/usage/claude');
-          const data = await res.json();
+          const json = await res.json();
+          const data = json.data || json;
           document.getElementById('${props.id}-tokens').textContent = ((data.tokens || 0) / 1000).toFixed(1) + 'K';
           if (data.cost) {
             document.getElementById('${props.id}-cost').textContent = '$' + data.cost.toFixed(2) + ' today';
@@ -817,7 +826,8 @@ const WIDGETS = {
       async function update_${props.id.replace(/-/g, '_')}() {
         try {
           const res = await fetch('/api/usage/openai');
-          const data = await res.json();
+          const json = await res.json();
+          const data = json.data || json;
           document.getElementById('${props.id}-tokens').textContent = ((data.tokens || 0) / 1000).toFixed(1) + 'K';
           if (data.cost) {
             document.getElementById('${props.id}-cost').textContent = '$' + data.cost.toFixed(2) + ' today';
@@ -863,7 +873,8 @@ const WIDGETS = {
       async function update_${props.id.replace(/-/g, '_')}() {
         try {
           const res = await fetch('/api/usage/gemini');
-          const data = await res.json();
+          const json = await res.json();
+          const data = json.data || json;
           document.getElementById('${props.id}-tokens').textContent = ((data.tokens || 0) / 1000).toFixed(1) + 'K';
           if (data.cost) {
             document.getElementById('${props.id}-cost').textContent = '$' + data.cost.toFixed(2) + ' today';
@@ -924,7 +935,8 @@ const WIDGETS = {
         const results = await Promise.all(services.map(async (svc) => {
           try {
             const res = await fetch(svc.endpoint);
-            const data = await res.json();
+            const json = await res.json();
+            const data = json.data || json;
             return { ...svc, tokens: data.tokens || 0, cost: data.cost || 0 };
           } catch (e) {
             return { ...svc, tokens: 0, cost: 0, error: true };
@@ -974,7 +986,8 @@ const WIDGETS = {
       async function update_${props.id.replace(/-/g, '_')}() {
         try {
           const res = await fetch('${props.endpoint || '/api/costs'}?period=${props.period || 'today'}');
-          const data = await res.json();
+          const json = await res.json();
+          const data = json.data || json;
           document.getElementById('${props.id}-cost').textContent = '$' + (data.cost || 0).toFixed(2);
         } catch (e) {
           document.getElementById('${props.id}-cost').textContent = '$—';
@@ -1076,7 +1089,8 @@ const WIDGETS = {
       async function update_${props.id.replace(/-/g, '_')}() {
         try {
           const res = await fetch('${props.endpoint || '/api/sessions'}');
-          const data = await res.json();
+          const json = await res.json();
+          const data = json.data || json;
           document.getElementById('${props.id}-count').textContent = data.active || data.length || 0;
         } catch (e) {
           document.getElementById('${props.id}-count').textContent = '—';
@@ -1118,7 +1132,8 @@ const WIDGETS = {
       async function update_${props.id.replace(/-/g, '_')}() {
         try {
           const res = await fetch('${props.endpoint || '/api/usage/tokens'}');
-          const data = await res.json();
+          const json = await res.json();
+          const data = json.data || json;
           const tokens = data.tokens || 0;
           const max = ${props.maxTokens || 1000000};
           const pct = Math.min(100, (tokens / max) * 100);
@@ -1307,14 +1322,16 @@ const WIDGETS = {
       async function update_${props.id.replace(/-/g, '_')}() {
         try {
           const res = await fetch('${props.endpoint || '/api/docker'}');
-          const data = await res.json();
+          const json = await res.json();
+          const data = json.data || json;
           const list = document.getElementById('${props.id}-list');
           const badge = document.getElementById('${props.id}-badge');
-          list.innerHTML = (data.containers || []).map(c => {
+          const containers = data.containers || [];
+          list.innerHTML = containers.map(c => {
             const icon = c.status === 'running' ? '🟢' : '🔴';
             return '<div class="docker-row">' + icon + ' ' + c.name + '<span class="docker-status">' + c.status + '</span></div>';
           }).join('');
-          badge.textContent = (data.containers || []).length + ' containers';
+          badge.textContent = containers.length + ' containers';
         } catch (e) {
           console.error('Docker containers widget error:', e);
           document.getElementById('${props.id}-list').innerHTML = '<div class="docker-row">—</div>';
