@@ -877,7 +877,7 @@ body {
    System Widget Styles
    ============================================ */
 
-.uptime-row, .docker-row, .sys-row {
+.uptime-row, .docker-row, .sys-row, .net-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -887,7 +887,8 @@ body {
 
 .uptime-row + .uptime-row,
 .docker-row + .docker-row,
-.sys-row + .sys-row {
+.sys-row + .sys-row,
+.net-row + .net-row {
   border-top: 1px solid var(--border);
 }
 

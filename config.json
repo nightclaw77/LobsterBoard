@@ -3,6 +3,7 @@
     "width": 1920,
     "height": 1080
   },
+  "fontScale": 1.5,
   "widgets": [
     {
       "id": "widget-1",

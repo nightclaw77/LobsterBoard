@@ -1225,9 +1225,14 @@ const WIDGETS = {
       <div>MEM: <span style="color:#3fb950;">4.2GB</span></div>
     </div>`,
     generateHtml: (props) => `
-      <div class="kpi-card kpi-sm" id="widget-${props.id}" style="flex-direction:column;">
+      <div class="dash-card" id="widget-${props.id}" style="height:100%;">
+        <div class="dash-card-head">
+          <span class="dash-card-title">💻 ${props.title || 'System'}</span>
+        </div>
+        <div class="dash-card-body">
         <div class="sys-row"><span>CPU</span><span class="blue" id="${props.id}-cpu">—</span></div>
         <div class="sys-row"><span>MEM</span><span class="green" id="${props.id}-mem">—</span></div>
+        </div>
       </div>`,
     generateJs: (props) => `
       // CPU/Memory Widget: ${props.id} — live via SSE
@@ -1263,18 +1268,23 @@ const WIDGETS = {
       <div style="font-size:11px;color:#8b949e;">256GB used</div>
     </div>`,
     generateHtml: (props) => `
-      <div class="kpi-card kpi-sm" id="widget-${props.id}">
-        <div class="kpi-ring-wrap kpi-ring-sm">
-          <svg class="kpi-ring" viewBox="0 0 48 48">
-            <circle cx="24" cy="24" r="20" fill="none" stroke="var(--bg-tertiary)" stroke-width="4"/>
-            <circle id="${props.id}-ring" cx="24" cy="24" r="20" fill="none" stroke="var(--accent-orange)" stroke-width="4"
-              stroke-dasharray="125.66" stroke-dashoffset="125.66" stroke-linecap="round"
-              transform="rotate(-90 24 24)" style="transition: stroke-dashoffset 0.6s ease;"/>
-          </svg>
-          <div class="kpi-ring-label" id="${props.id}-pct">—</div>
+      <div class="dash-card" id="widget-${props.id}" style="height:100%;">
+        <div class="dash-card-head">
+          <span class="dash-card-title">💾 ${props.title || 'Disk Usage'}</span>
         </div>
-        <div class="kpi-data">
-          <div class="kpi-label" id="${props.id}-size">Disk</div>
+        <div class="dash-card-body" style="display:flex;align-items:center;justify-content:center;gap:10px;">
+          <div class="kpi-ring-wrap kpi-ring-sm">
+            <svg class="kpi-ring" viewBox="0 0 48 48">
+              <circle cx="24" cy="24" r="20" fill="none" stroke="var(--bg-tertiary)" stroke-width="4"/>
+              <circle id="${props.id}-ring" cx="24" cy="24" r="20" fill="none" stroke="var(--accent-orange)" stroke-width="4"
+                stroke-dasharray="125.66" stroke-dashoffset="125.66" stroke-linecap="round"
+                transform="rotate(-90 24 24)" style="transition: stroke-dashoffset 0.6s ease;"/>
+            </svg>
+            <div class="kpi-ring-label" id="${props.id}-pct">—</div>
+          </div>
+          <div class="kpi-data">
+            <div class="kpi-label" id="${props.id}-size">Disk</div>
+          </div>
         </div>
       </div>`,
     generateJs: (props) => `
@@ -1415,9 +1425,14 @@ const WIDGETS = {
       <div>↑ <span style="color:#58a6ff;">12 Mbps</span></div>
     </div>`,
     generateHtml: (props) => `
-      <div class="kpi-card kpi-sm" id="widget-${props.id}" style="flex-direction:column;">
-        <div class="net-row">↓ <span class="green" id="${props.id}-down">—</span></div>
-        <div class="net-row">↑ <span class="blue" id="${props.id}-up">—</span></div>
+      <div class="dash-card" id="widget-${props.id}" style="height:100%;">
+        <div class="dash-card-head">
+          <span class="dash-card-title">🌐 ${props.title || 'Network'}</span>
+        </div>
+        <div class="dash-card-body" style="display:flex;flex-direction:column;align-items:center;justify-content:center;">
+          <div class="net-row">↓ <span class="green" id="${props.id}-down">—</span></div>
+          <div class="net-row">↑ <span class="blue" id="${props.id}-up">—</span></div>
+        </div>
       </div>`,
     generateJs: (props) => `
       // Network Speed Widget: ${props.id} — live via SSE
