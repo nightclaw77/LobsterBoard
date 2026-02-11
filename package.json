@@ -45,7 +45,7 @@
   },
   "files": [
     "server.cjs",
-    "index.html",
+    "app.html",
     "js/",
     "css/",
     "dist",
