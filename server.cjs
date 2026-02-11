@@ -146,6 +146,43 @@ function sendError(res, message, statusCode = 500) {
   sendJson(res, statusCode, { status: 'error', message });
 }
 
+// Parse iCal (.ics) text into sorted upcoming events
+function parseIcal(text, maxEvents) {
+  const now = new Date();
+  const events = [];
+  // Unfold continuation lines (RFC 5545: lines starting with space/tab are continuations)
+  const unfolded = text.replace(/\r?\n[ \t]/g, '');
+  const blocks = unfolded.split('BEGIN:VEVENT');
+  for (let i = 1; i < blocks.length; i++) {
+    const block = blocks[i].split('END:VEVENT')[0];
+    if (!block) continue;
+    const get = (key) => { const m = block.match(new RegExp('^' + key + '(?:;[^:]*)?:(.*)$', 'm')); return m ? m[1].trim() : ''; };
+    const summary = get('SUMMARY').replace(/\\,/g, ',').replace(/\\n/g, ' ');
+    const location = get('LOCATION').replace(/\\,/g, ',').replace(/\\n/g, ' ');
+    const dtstart = get('DTSTART');
+    const dtend = get('DTEND');
+    if (!dtstart) continue;
+    // Parse iCal date: 20260210T150000Z or 20260210 (all-day)
+    const allDay = dtstart.length === 8;
+    const parseIcalDate = (s) => {
+      if (!s) return null;
+      if (s.length === 8) return new Date(s.slice(0,4) + '-' + s.slice(4,6) + '-' + s.slice(6,8) + 'T00:00:00');
+      // 20260210T150000Z or 20260210T150000
+      const d = s.replace(/Z$/, '');
+      return new Date(d.slice(0,4) + '-' + d.slice(4,6) + '-' + d.slice(6,8) + 'T' + d.slice(9,11) + ':' + d.slice(11,13) + ':' + d.slice(13,15) + (s.endsWith('Z') ? 'Z' : ''));
+    };
+    const start = parseIcalDate(dtstart);
+    const end = parseIcalDate(dtend);
+    if (!start || isNaN(start.getTime())) continue;
+    // Only future events (for all-day, include today)
+    const cutoff = allDay ? new Date(now.getFullYear(), now.getMonth(), now.getDate()) : now;
+    if (start < cutoff && (!end || end < cutoff)) continue;
+    events.push({ summary: summary || 'Untitled', start: start.toISOString(), end: end ? end.toISOString() : null, location: location || null, allDay });
+  }
+  events.sort((a, b) => new Date(a.start) - new Date(b.start));
+  return events.slice(0, maxEvents);
+}
+
 const server = http.createServer((req, res) => {
   const parsedUrl = new URL(req.url, `http://${req.headers.host}`);
   const pathname = parsedUrl.pathname;
@@ -529,6 +566,51 @@ const server = http.createServer((req, res) => {
         req2.on('timeout', () => { req2.destroy(); sendError(res, 'Feed request timed out'); });
       }
       fetchFeed(feedUrl, 0);
+    } catch (e) { sendError(res, e.message); }
+    return;
+  }
+
+  // GET /api/calendar?url=<icalUrl>&max=<maxEvents> - iCal feed proxy + parser
+  if (req.method === 'GET' && pathname === '/api/calendar') {
+    const icalUrl = parsedUrl.searchParams.get('url');
+    const maxEvents = Math.min(parseInt(parsedUrl.searchParams.get('max')) || 10, 50);
+    if (!icalUrl) { sendError(res, 'Missing url parameter', 400); return; }
+
+    // 5-minute cache keyed by url+max
+    if (!global._calendarCache) global._calendarCache = {};
+    const cacheKey = icalUrl + '|' + maxEvents;
+    const cached = global._calendarCache[cacheKey];
+    if (cached && Date.now() - cached.ts < 300000) {
+      sendJson(res, 200, cached.data);
+      return;
+    }
+
+    try {
+      const https = require('https');
+      const http2 = require('http');
+      function fetchIcal(url, redirects) {
+        if (redirects > 3) { sendError(res, 'Too many redirects'); return; }
+        const mod = url.startsWith('https') ? https : http2;
+        const req2 = mod.get(url, { headers: { 'User-Agent': 'LobsterBoard/1.0' }, timeout: 15000 }, (proxyRes) => {
+          if ([301, 302, 307, 308].includes(proxyRes.statusCode) && proxyRes.headers.location) {
+            proxyRes.resume();
+            fetchIcal(proxyRes.headers.location, redirects + 1);
+            return;
+          }
+          let body = '';
+          proxyRes.on('data', c => { body += c; if (body.length > 5000000) proxyRes.destroy(); });
+          proxyRes.on('end', () => {
+            try {
+              const events = parseIcal(body, maxEvents);
+              global._calendarCache[cacheKey] = { ts: Date.now(), data: events };
+              sendJson(res, 200, events);
+            } catch (e) { sendError(res, 'Failed to parse iCal: ' + e.message); }
+          });
+        });
+        req2.on('error', e => sendError(res, e.message));
+        req2.on('timeout', () => { req2.destroy(); sendError(res, 'Request timed out'); });
+      }
+      fetchIcal(icalUrl, 0);
     } catch (e) { sendError(res, e.message); }
     return;
   }

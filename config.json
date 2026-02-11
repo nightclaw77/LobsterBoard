@@ -314,6 +314,32 @@
         "maxItems": 10,
         "refreshInterval": 600
       }
+    },
+    {
+      "id": "widget-31",
+      "type": "todo-list",
+      "x": 1080,
+      "y": 260,
+      "width": 350,
+      "height": 300,
+      "properties": {
+        "title": "Todo",
+        "items": "Finish LobsterBoard, Check all the widgets, see the world"
+      }
+    },
+    {
+      "id": "widget-32",
+      "type": "calendar",
+      "x": 1460,
+      "y": 260,
+      "width": 400,
+      "height": 300,
+      "properties": {
+        "title": "Calendar",
+        "calendarId": "primary",
+        "maxEvents": 5,
+        "refreshInterval": 300
+      }
     }
   ]
 }

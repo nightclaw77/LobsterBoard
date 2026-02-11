@@ -710,14 +710,12 @@ const WIDGETS = {
     name: 'Calendar',
     icon: '📅',
     category: 'large',
-    description: 'Displays upcoming calendar events. Requires calendar API endpoint.',
+    description: 'Displays upcoming events from an iCal (.ics) feed URL. Works with Google Calendar, Outlook, and Apple Calendar.',
     defaultWidth: 400,
     defaultHeight: 300,
-    hasApiKey: true,
-    apiKeyName: 'CALENDAR_API_KEY',
     properties: {
       title: 'Calendar',
-      calendarId: 'primary',
+      icalUrl: '',
       maxEvents: 5,
       refreshInterval: 300
     },
@@ -730,21 +728,41 @@ const WIDGETS = {
         <div class="dash-card-head">
           <span class="dash-card-title">📅 ${props.title || 'Calendar'}</span>
         </div>
-        <div class="dash-card-body" id="${props.id}-events">
-          <div class="event-item">📅 Team standup — 10:00 AM</div>
-          <div class="event-item">📅 1:1 with manager — 2:00 PM</div>
-          <div class="event-item">📅 Sprint review — 4:00 PM</div>
+        <div class="dash-card-body" id="${props.id}-events" style="overflow-y:auto;">
+          <div style="color:#8b949e;font-size:calc(13px * var(--font-scale, 1));">Loading events…</div>
         </div>
       </div>`,
     generateJs: (props) => `
-      // Calendar Widget: ${props.id}
-      // Requires Google Calendar API setup
       async function update_${props.id.replace(/-/g, '_')}() {
-        // Replace with your calendar API integration
-        document.getElementById('${props.id}-events').innerHTML = 
-          '<div class="event-item">Configure your calendar API</div>';
+        const container = document.getElementById('${props.id}-events');
+        const icalUrl = ${JSON.stringify(props.icalUrl || '')};
+        if (!icalUrl) {
+          container.innerHTML = '<div style="color:#8b949e;font-size:calc(13px * var(--font-scale, 1));">Set an iCal feed URL in widget settings</div>';
+          return;
+        }
+        try {
+          const resp = await fetch('/api/calendar?url=' + encodeURIComponent(icalUrl) + '&max=${props.maxEvents || 5}');
+          if (!resp.ok) throw new Error('HTTP ' + resp.status);
+          const events = await resp.json();
+          if (!events.length) {
+            container.innerHTML = '<div style="color:#8b949e;font-size:calc(13px * var(--font-scale, 1));">No upcoming events</div>';
+            return;
+          }
+          container.innerHTML = events.map(function(ev) {
+            var timeStr = ev.allDay ? 'All Day' : new Date(ev.start).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+            return '<div style="padding:4px 0;border-bottom:1px solid #21262d;font-size:calc(13px * var(--font-scale, 1));">' +
+              '<span style="color:#58a6ff;">' + timeStr + '</span> ' +
+              '<span style="color:#e6edf3;">' + (ev.summary || 'Untitled') + '</span>' +
+              (ev.location ? '<div style="color:#8b949e;font-size:calc(11px * var(--font-scale, 1));margin-top:2px;">📍 ' + ev.location + '</div>' : '') +
+              '</div>';
+          }).join('');
+        } catch (e) {
+          console.error('Calendar widget error:', e);
+          container.innerHTML = '<div style="color:#f85149;font-size:calc(13px * var(--font-scale, 1));">Failed to load calendar</div>';
+        }
       }
       update_${props.id.replace(/-/g, '_')}();
+      setInterval(update_${props.id.replace(/-/g, '_')}, ${Math.max((props.refreshInterval || 300), 60) * 1000});
     `
   },
 
@@ -1551,8 +1569,7 @@ const WIDGETS = {
     defaultHeight: 300,
     hasApiKey: false,
     properties: {
-      title: 'Todo',
-      items: 'Task 1,Task 2,Task 3'
+      title: 'Todo'
     },
     preview: `<div style="padding:4px;font-size:11px;">
       <div>☑️ Complete project</div>
