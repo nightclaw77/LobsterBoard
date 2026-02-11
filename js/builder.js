@@ -433,7 +433,7 @@ function createWidget(type, x, y) {
     y: Math.max(0, Math.round(y - template.defaultHeight / 2)),
     width: template.defaultWidth,
     height: template.defaultHeight,
-    properties: { ...template.properties }
+    properties: JSON.parse(JSON.stringify(template.properties))
   };
 
   // Snap to grid (20px)
