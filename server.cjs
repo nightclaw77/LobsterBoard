@@ -756,7 +756,11 @@ const server = http.createServer((req, res) => {
         ]);
 
         const todayData = await todayResp.json();
-        if (!todayResp.ok) { sendJson(res, 200, { error: todayData.error?.message || 'API error', tokens: 0, cost: 0, models: [] }); return; }
+        if (!todayResp.ok) {
+          const errMsg = todayData.error?.message || todayData.error || 'API error';
+          const hint = typeof errMsg === 'string' && errMsg.includes('scope') ? ' Enable "Usage: Read" scope on your API key.' : '';
+          sendJson(res, 200, { error: errMsg + hint, tokens: 0, cost: 0, models: [] }); return;
+        }
         const weekData = await weekResp.json();
         const monthData = await monthResp.json();
 

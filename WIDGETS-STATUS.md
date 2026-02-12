@@ -37,7 +37,7 @@
 
 ## ⚠️ Needs Backend (Custom Setup Required)
 - [x] ai-usage-claude - ✅ Server proxy + widget implemented (ANTHROPIC_ADMIN_KEY)
-- [x] ai-usage-openai - ✅ Server proxy + widget implemented (OPENAI_API_KEY)
+- [ ] ai-usage-openai - DROPPED (requires Admin API key, not available on all plans)
 - ~~ai-usage-gemini~~ - ❌ DROPPED (no public usage API)
 - ~~ai-usage-multi~~ - ❌ DROPPED (removed with gemini)
 - [ ] ai-cost-tracker - aggregate costs endpoint

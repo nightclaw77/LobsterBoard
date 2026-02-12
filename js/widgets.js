@@ -890,7 +890,7 @@ const WIDGETS = {
     properties: {
       title: 'Claude',
       refreshInterval: 300,
-      apiKeyNote: 'Requires Admin API key from console.anthropic.com → Settings → Admin API Keys'
+      apiKeyNote: ''
     },
     preview: `<div style="text-align:center;padding:8px;">
       <div style="font-size:11px;color:#a371f7;">Claude</div>
@@ -942,68 +942,9 @@ const WIDGETS = {
     `
   },
 
-  'ai-usage-openai': {
-    name: 'OpenAI Usage',
-    icon: '🟢',
-    category: 'small',
-    description: 'Shows OpenAI API usage and costs. Requires API key with Usage permission.',
-    defaultWidth: 220,
-    defaultHeight: 160,
-    hasApiKey: true,
-    apiKeyName: 'OPENAI_API_KEY',
-    hideApiKeyVar: true,
-    properties: {
-      title: 'OpenAI',
-      refreshInterval: 300,
-      apiKeyNote: 'Requires API key with Usage permission from platform.openai.com → API Keys'
-    },
-    preview: `<div style="text-align:center;padding:8px;">
-      <div style="font-size:11px;color:#3fb950;">OpenAI</div>
-      <div style="font-size:18px;">$1.50</div>
-      <div style="font-size:11px;color:#8b949e;">cost today</div>
-      <div style="font-size:10px;color:#6e7681;margin-top:4px;">Week $8.20 · Month $32.00</div>
-    </div>`,
-    generateHtml: (props) => `
-      <div class="dash-card" id="widget-${props.id}" style="height:100%;">
-        <div class="dash-card-head">
-          <span class="dash-card-title">🟢 ${props.title || 'OpenAI'}</span>
-        </div>
-        <div class="dash-card-body" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;">
-          <div class="kpi-value" id="${props.id}-cost-main" style="color:#3fb950;font-size:22px;">—</div>
-          <div class="kpi-label" id="${props.id}-subtitle" style="font-size:12px;">today</div>
-          <div id="${props.id}-period" style="font-size:10px;color:#6e7681;margin-top:4px;text-align:center;"></div>
-        </div>
-      </div>`,
-    generateJs: (props) => `
-      async function update_${props.id.replace(/-/g, '_')}() {
-        try {
-          const res = await fetch('/api/usage/openai');
-          const data = await res.json();
-          const costEl = document.getElementById('${props.id}-cost-main');
-          const subEl = document.getElementById('${props.id}-subtitle');
-          const periodEl = document.getElementById('${props.id}-period');
-          if (data.error) {
-            costEl.textContent = '⚠️';
-            costEl.style.fontSize = '18px';
-            subEl.textContent = data.error.includes('API key') ? 'No API Key' : data.error;
-            periodEl.textContent = '';
-            return;
-          }
-          costEl.textContent = '$' + (data.cost || 0).toFixed(2);
-          subEl.textContent = 'cost today';
-          const parts = [];
-          if (data.week) parts.push('Week $' + data.week.cost.toFixed(2));
-          if (data.month) parts.push('Month $' + data.month.cost.toFixed(2));
-          periodEl.textContent = parts.join(' · ');
-        } catch (e) {
-          document.getElementById('${props.id}-cost-main').textContent = '—';
-          document.getElementById('${props.id}-subtitle').textContent = 'Error';
-        }
-      }
-      update_${props.id.replace(/-/g, '_')}();
-      setInterval(update_${props.id.replace(/-/g, '_')}, ${(props.refreshInterval || 300) * 1000});
-    `
-  },
+  /* DROPPED: OpenAI Usage - requires Admin API key which is not available on all plans
+  'ai-usage-openai': { ... },
+  */
 
   /* DROPPED: Gemini - no public usage API available
   'ai-usage-gemini': {

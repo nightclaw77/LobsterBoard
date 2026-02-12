@@ -958,7 +958,8 @@ const HANDLED_PROPS = new Set([
   'targetDate', 'showHours', 'showMinutes',
   'workMinutes', 'breakMinutes',
   'imagePath', 'imageUrl', 'images', 'links',
-  'embedUrl', 'repo', 'currentVersion', 'openclawUrl'
+  'embedUrl', 'repo', 'currentVersion', 'openclawUrl',
+  'apiKey', 'apiKeyNote'
 ]);
 
 // Known select/dropdown options for specific properties
