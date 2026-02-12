@@ -1,6 +1,6 @@
 # 🦞 LobsterBoard
 
-A self-hosted, drag-and-drop dashboard builder with live system monitoring, dark theme, and 47 widgets. No cloud dependencies.
+A self-hosted, drag-and-drop dashboard builder with live system monitoring, dark theme, and 45 widgets. No cloud dependencies.
 
 ![LobsterBoard](lobsterboard-logo-final.png)
 
@@ -58,7 +58,7 @@ Press **Ctrl+E** (or click **Edit Layout**) to toggle edit mode:
 
 In view mode, the canvas auto-scales to fit your browser window and all widget scripts run live.
 
-## Widgets (47)
+## Widgets (45)
 
 ### 🖥️ System Monitoring
 Live data via SSE — updates every 2–30 seconds automatically.
@@ -205,7 +205,7 @@ dashboard-builder/
 ├── todos.json          # Todo list data
 ├── js/
 │   ├── builder.js      # Canvas, drag-drop, edit mode, zoom, config I/O
-│   └── widgets.js      # All 47 widget definitions + SSE helpers
+│   └── widgets.js      # All 45 widget definitions + SSE helpers
 ├── css/
 │   └── builder.css     # Dark theme (CSS custom properties)
 └── package.json        # npm package config
