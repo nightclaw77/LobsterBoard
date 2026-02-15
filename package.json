@@ -1,17 +1,19 @@
 {
   "name": "lobsterboard",
-  "version": "0.1.6",
-  "description": "Dashboard builder library with customizable widgets for creating beautiful monitoring dashboards",
+  "version": "0.2.0",
+  "description": "Self-hosted drag-and-drop dashboard builder with 50 widgets, template gallery, and custom pages. Works standalone or with OpenClaw.",
   "keywords": [
     "dashboard",
     "widgets",
     "monitoring",
     "kpi",
     "builder",
+    "homelab",
+    "self-hosted",
     "openclaw"
   ],
   "author": "curbob",
-  "license": "MIT",
+  "license": "BSL-1.1",
   "homepage": "https://github.com/curbob/LobsterBoard#readme",
   "repository": {
     "type": "git",
@@ -51,6 +53,8 @@
     "dist",
     "src",
     "bin/",
+    "templates/",
+    "js/templates.js",
     "README.md",
     "CHANGELOG.md",
     "LICENSE"

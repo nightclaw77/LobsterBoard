@@ -31,6 +31,25 @@ const state = {
 };
 
 // ─────────────────────────────────────────────
+// SCROLLABLE / UNLIMITED HEIGHT HELPERS
+// ─────────────────────────────────────────────
+
+function isScrollableMode() {
+  return state.canvas.height === 'auto';
+}
+
+/** Return the pixel height the canvas should actually use (based on lowest widget + padding). */
+function getScrollableCanvasHeight() {
+  if (!state.widgets.length) return 1080; // sensible default when empty
+  let maxBottom = 0;
+  state.widgets.forEach(w => {
+    const bottom = w.y + w.height;
+    if (bottom > maxBottom) maxBottom = bottom;
+  });
+  return maxBottom + 100; // 100px breathing room below lowest widget
+}
+
+// ─────────────────────────────────────────────
 // EDIT MODE
 // ─────────────────────────────────────────────
 
@@ -155,6 +174,24 @@ function scaleCanvasToFit() {
   const vw = window.innerWidth;
   const vh = window.innerHeight;
   const cw = state.canvas.width;
+
+  if (isScrollableMode()) {
+    // Scrollable: scale width to fit viewport, height scrolls naturally
+    const effectiveHeight = getScrollableCanvasHeight();
+    canvas.style.height = effectiveHeight + 'px';
+    const scale = vw / cw;
+    canvas.style.transform = `scale(${scale})`;
+    canvas.style.transformOrigin = 'top left';
+    const scaledW = cw * scale;
+    const offsetX = Math.max(0, (vw - scaledW) / 2);
+    canvas.style.marginLeft = offsetX + 'px';
+    canvas.style.marginTop = '0px';
+    // Set wrapper height so page scrolls
+    const wrapper = document.getElementById('canvas-wrapper');
+    wrapper.style.height = (effectiveHeight * scale) + 'px';
+    return;
+  }
+
   const ch = state.canvas.height;
   const scale = Math.min(vw / cw, vh / ch);
   canvas.style.transform = `scale(${scale})`;
@@ -195,6 +232,19 @@ async function loadConfig() {
     
     state.canvas = config.canvas || { width: 1920, height: 1080 };
     state.fontScale = config.fontScale || 1;
+
+    // Restore canvas size dropdown to match loaded config
+    const sizeSelect = document.getElementById('canvas-size');
+    if (state.canvas.height === 'auto') {
+      sizeSelect.value = 'scrollable';
+    } else {
+      const sizeKey = state.canvas.width + 'x' + state.canvas.height;
+      if (sizeSelect.querySelector(`option[value="${sizeKey}"]`)) {
+        sizeSelect.value = sizeKey;
+      } else {
+        sizeSelect.value = 'custom';
+      }
+    }
     state.widgets = config.widgets || [];
     document.documentElement.style.setProperty('--font-scale', state.fontScale);
     const fontScaleEl = document.getElementById('font-scale');
@@ -298,6 +348,7 @@ function initCanvas() {
 function updateCanvasSize(preserveZoom = false) {
   const canvas = document.getElementById('canvas');
   const wrapper = document.getElementById('canvas-wrapper');
+  const effectiveHeight = isScrollableMode() ? getScrollableCanvasHeight() : state.canvas.height;
 
   // Calculate zoom to fit (only if not preserving zoom)
   if (!preserveZoom) {
@@ -306,15 +357,18 @@ function updateCanvasSize(preserveZoom = false) {
     const maxHeight = wrapperRect.height - 80;
 
     const scaleX = maxWidth / state.canvas.width;
-    const scaleY = maxHeight / state.canvas.height;
+    const scaleY = maxHeight / effectiveHeight;
     state.zoom = Math.min(scaleX, scaleY, 0.6);
   }
 
   canvas.style.width = state.canvas.width + 'px';
-  canvas.style.height = state.canvas.height + 'px';
+  canvas.style.height = isScrollableMode() ? effectiveHeight + 'px' : state.canvas.height + 'px';
   canvas.style.transform = `scale(${state.zoom})`;
   canvas.dataset.width = state.canvas.width;
-  canvas.dataset.height = state.canvas.height;
+  canvas.dataset.height = isScrollableMode() ? 'auto' : state.canvas.height;
+
+  // Toggle scrollable class on body
+  document.body.classList.toggle('canvas-scrollable', isScrollableMode());
 
   updateCanvasInfo();
 }
@@ -352,7 +406,7 @@ window.state = state;
 
 function updateCanvasInfo() {
   document.getElementById('canvas-dimensions').textContent =
-    `${state.canvas.width} × ${state.canvas.height}`;
+    `${state.canvas.width} × ${isScrollableMode() ? '∞ (scrollable)' : state.canvas.height}`;
   document.getElementById('widget-count').textContent =
     `${state.widgets.length} widget${state.widgets.length !== 1 ? 's' : ''}`;
   document.getElementById('zoom-level').textContent =
@@ -442,9 +496,16 @@ function createWidget(type, x, y) {
 
   // Keep in bounds
   widget.x = Math.min(widget.x, state.canvas.width - widget.width);
-  widget.y = Math.min(widget.y, state.canvas.height - widget.height);
+  if (!isScrollableMode()) {
+    widget.y = Math.min(widget.y, state.canvas.height - widget.height);
+  }
 
   state.widgets.push(widget);
+
+  // In scrollable mode, grow canvas to fit new widget
+  if (isScrollableMode()) {
+    updateCanvasSize(true);
+  }
   renderWidget(widget);
   updateEmptyState();
   selectWidget(id);
@@ -457,13 +518,26 @@ function createWidget(type, x, y) {
 function applyWidgetFontScale(widget) {
   const el = document.getElementById(widget.id);
   if (!el) return;
-  const body = el.querySelector('.dash-card-body, .widget-render');
-  if (widget.properties.widgetFontScale) {
-    el.style.setProperty('--font-scale', widget.properties.widgetFontScale);
-    if (body) body.style.fontSize = (widget.properties.widgetFontScale * 100) + '%';
+  const body = el.querySelector('.dash-card-body');
+  const render = el.querySelector('.widget-render');
+  const adjustment = widget.properties.widgetFontAdjust || 0; // e.g. -25, -10, 0, +10, +25
+  if (adjustment !== 0) {
+    // Compute effective scale: global + adjustment (additive percentage points)
+    const globalScale = state.fontScale || 1;
+    const effectiveScale = globalScale + (adjustment / 100);
+    // Set --font-scale override on widget body content only (header stays at global)
+    const target = body || render;
+    if (target) {
+      target.style.setProperty('--font-scale', effectiveScale);
+      target.style.fontSize = (effectiveScale * 100) + '%';
+    }
   } else {
-    el.style.removeProperty('--font-scale');
-    if (body) body.style.removeProperty('font-size');
+    // No adjustment — inherit global
+    const target = body || render;
+    if (target) {
+      target.style.removeProperty('--font-scale');
+      target.style.removeProperty('font-size');
+    }
   }
 }
 
@@ -611,10 +685,19 @@ function startDragWidget(e, widget) {
 
     // Keep in bounds
     widget.x = Math.max(0, Math.min(widget.x, state.canvas.width - widget.width));
-    widget.y = Math.max(0, Math.min(widget.y, state.canvas.height - widget.height));
+    if (isScrollableMode()) {
+      widget.y = Math.max(0, widget.y);
+    } else {
+      widget.y = Math.max(0, Math.min(widget.y, state.canvas.height - widget.height));
+    }
 
     el.style.left = widget.x + 'px';
     el.style.top = widget.y + 'px';
+
+    // In scrollable mode, grow canvas to fit
+    if (isScrollableMode()) {
+      updateCanvasSize(true);
+    }
 
     updatePropertyInputs();
   }
@@ -648,10 +731,17 @@ function startResizeWidget(e, widget) {
 
     // Keep in bounds
     widget.width = Math.min(widget.width, state.canvas.width - widget.x);
-    widget.height = Math.min(widget.height, state.canvas.height - widget.y);
+    if (!isScrollableMode()) {
+      widget.height = Math.min(widget.height, state.canvas.height - widget.y);
+    }
 
     el.style.width = widget.width + 'px';
     el.style.height = widget.height + 'px';
+
+    // In scrollable mode, grow canvas to fit
+    if (isScrollableMode()) {
+      updateCanvasSize(true);
+    }
 
     updatePropertyInputs();
   }
@@ -742,6 +832,9 @@ function initProperties() {
   // Release widget
   document.getElementById('prop-repo').addEventListener('input', onPropertyChange);
   document.getElementById('prop-currentversion').addEventListener('input', onPropertyChange);
+  if (document.getElementById('prop-gh-username')) document.getElementById('prop-gh-username').addEventListener('input', onPropertyChange);
+  if (document.getElementById('prop-gh-repo')) document.getElementById('prop-gh-repo').addEventListener('input', onPropertyChange);
+  if (document.getElementById('prop-gh-apikey')) document.getElementById('prop-gh-apikey').addEventListener('input', onPropertyChange);
   document.getElementById('prop-openclawurl').addEventListener('input', onPropertyChange);
 
   // Delete button
@@ -781,6 +874,7 @@ function showProperties(widget) {
   document.getElementById('prop-quicklinks-group').style.display = 'none';
   document.getElementById('prop-embedurl-group').style.display = 'none';
   document.getElementById('prop-release-group').style.display = 'none';
+  if (document.getElementById('prop-github-group')) document.getElementById('prop-github-group').style.display = 'none';
   document.getElementById('prop-openclawurl-group').style.display = 'none';
   document.getElementById('prop-title-hint').style.display = 'none';
   document.getElementById('prop-fontsize-group').style.display = 'none';
@@ -937,6 +1031,14 @@ function showProperties(widget) {
     document.getElementById('prop-currentversion').value = widget.properties.currentVersion || '';
   }
 
+  // Show GitHub stats fields
+  if (widget.type === 'github-stats') {
+    document.getElementById('prop-github-group').style.display = 'block';
+    document.getElementById('prop-gh-username').value = widget.properties.username || '';
+    document.getElementById('prop-gh-repo').value = widget.properties.repo || '';
+    document.getElementById('prop-gh-apikey').value = widget.properties.apiKey || '';
+  }
+
   // Show OpenClaw URL field
   if (widget.properties.openclawUrl !== undefined) {
     document.getElementById('prop-openclawurl-group').style.display = 'block';
@@ -973,7 +1075,7 @@ function showProperties(widget) {
   document.getElementById('prop-refresh').value = widget.properties.refreshInterval || 60;
 
   // Widget font scale (per-widget override)
-  document.getElementById('prop-widgetfontscale').value = widget.properties.widgetFontScale || '';
+  document.getElementById('prop-widgetfontscale').value = widget.properties.widgetFontAdjust || '0';
 
   // Render dynamic extra properties for fields not handled by hardcoded groups
   renderExtraProperties(widget, template);
@@ -998,8 +1100,8 @@ const HANDLED_PROPS = new Set([
   'workMinutes', 'breakMinutes',
   'imagePath', 'imageUrl', 'images', 'links',
   'embedUrl', 'repo', 'currentVersion', 'openclawUrl',
-  'apiKey', 'apiKeyNote',
-  'widgetFontScale',
+  'apiKey', 'apiKeyNote', 'username',
+  'widgetFontScale', 'widgetFontAdjust', 'symbols',
   'directoryPath'
 ]);
 
@@ -1007,6 +1109,11 @@ const HANDLED_PROPS = new Set([
 const PROP_OPTIONS = {
   period: ['today', 'week', 'month', 'year'],
   units: ['F', 'C'],
+  maxLength: ['0', '50', '100', '150', '200', '300'],
+};
+
+const PROP_LABELS = {
+  maxLength: { '0': 'No limit', '50': '50 chars', '100': '100 chars', '150': '150 chars', '200': '200 chars', '300': '300 chars' },
 };
 
 function renderExtraProperties(widget, template) {
@@ -1039,7 +1146,7 @@ function renderExtraProperties(widget, template) {
       PROP_OPTIONS[key].forEach(opt => {
         const option = document.createElement('option');
         option.value = opt;
-        option.textContent = opt.charAt(0).toUpperCase() + opt.slice(1);
+        option.textContent = (PROP_LABELS[key] && PROP_LABELS[key][opt]) || opt.charAt(0).toUpperCase() + opt.slice(1);
         if (String(currentVal) === String(opt)) option.selected = true;
         input.appendChild(option);
       });
@@ -1330,6 +1437,15 @@ function onPropertyChange(e) {
     case 'prop-currentversion':
       widget.properties.currentVersion = e.target.value;
       break;
+    case 'prop-gh-username':
+      widget.properties.username = e.target.value;
+      break;
+    case 'prop-gh-repo':
+      widget.properties.repo = e.target.value;
+      break;
+    case 'prop-gh-apikey':
+      widget.properties.apiKey = e.target.value;
+      break;
     case 'prop-openclawurl':
       widget.properties.openclawUrl = e.target.value;
       break;
@@ -1346,11 +1462,14 @@ function onPropertyChange(e) {
       widget.properties.refreshInterval = parseInt(e.target.value) || 60;
       break;
     case 'prop-widgetfontscale':
-      if (e.target.value) {
-        widget.properties.widgetFontScale = parseFloat(e.target.value);
+      const adj = parseInt(e.target.value) || 0;
+      if (adj !== 0) {
+        widget.properties.widgetFontAdjust = adj;
       } else {
-        delete widget.properties.widgetFontScale;
+        delete widget.properties.widgetFontAdjust;
       }
+      // Clean up old property if present
+      delete widget.properties.widgetFontScale;
       applyWidgetFontScale(widget);
       break;
     case 'prop-fontsize':
@@ -1398,6 +1517,14 @@ function initControls() {
       document.getElementById('custom-width').style.display = 'inline-block';
       document.getElementById('custom-x').style.display = 'inline-block';
       document.getElementById('custom-height').style.display = 'inline-block';
+    } else if (e.target.value === 'scrollable') {
+      document.getElementById('custom-width').style.display = 'none';
+      document.getElementById('custom-x').style.display = 'none';
+      document.getElementById('custom-height').style.display = 'none';
+
+      state.canvas.width = 1920;
+      state.canvas.height = 'auto';
+      updateCanvasSize();
     } else {
       document.getElementById('custom-width').style.display = 'none';
       document.getElementById('custom-x').style.display = 'none';
@@ -1424,6 +1551,8 @@ function initControls() {
     const scale = parseFloat(e.target.value) || 1;
     state.fontScale = scale;
     document.documentElement.style.setProperty('--font-scale', scale);
+    // Reapply per-widget adjustments since they're relative to global
+    state.widgets.forEach(w => applyWidgetFontScale(w));
   });
 
   // Clear button
@@ -1456,8 +1585,8 @@ function initControls() {
 
   // Keyboard shortcuts for zoom and edit mode
   document.addEventListener('keydown', (e) => {
-    // Check if not typing in an input
-    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+    // Check if not typing in an input/editable element
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT' || e.target.isContentEditable) return;
 
     if (e.ctrlKey && e.key === 'e') { // Ctrl+E to toggle edit mode
       e.preventDefault();
@@ -1525,7 +1654,7 @@ function showPreview() {
   <style>${css}</style>
 </head>
 <body>
-  <main class="dashboard" style="width:${state.canvas.width}px;height:${state.canvas.height}px;position:relative;">
+  <main class="dashboard" style="width:${state.canvas.width}px;height:${isScrollableMode() ? 'auto' : state.canvas.height + 'px'};min-height:${isScrollableMode() ? getScrollableCanvasHeight() + 'px' : 'auto'};position:relative;">
     ${widgetHtml}
   </main>
   <script>${js}</script>
@@ -1546,10 +1675,18 @@ async function exportDashboard() {
   const css = generateDashboardCss();
   const js = generateDashboardJs();
 
-  // Create ZIP using JSZip (loaded dynamically)
+  // Load JSZip dynamically
   if (!window.JSZip) {
     const script = document.createElement('script');
     script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
+    document.head.appendChild(script);
+    await new Promise(resolve => script.onload = resolve);
+  }
+
+  // Load html2canvas dynamically
+  if (!window.html2canvas) {
+    const script = document.createElement('script');
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
     document.head.appendChild(script);
     await new Promise(resolve => script.onload = resolve);
   }
@@ -1560,6 +1697,21 @@ async function exportDashboard() {
   zip.file('js/dashboard.js', js);
   zip.file('README.md', generateReadme());
   zip.file('server.js', generateServerJs());
+
+  // Capture preview screenshot automatically
+  try {
+    const canvas = document.getElementById('canvas');
+    const screenshot = await html2canvas(canvas, {
+      backgroundColor: '#0d1117',
+      scale: 1,
+      useCORS: true,
+      allowTaint: true
+    });
+    const pngBlob = await new Promise(resolve => screenshot.toBlob(resolve, 'image/png'));
+    zip.file('preview.png', pngBlob);
+  } catch (e) {
+    console.warn('Could not generate preview screenshot:', e);
+  }
 
   const blob = await zip.generateAsync({ type: 'blob' });
 
@@ -1596,7 +1748,7 @@ function generateDashboardHtml() {
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-  <main class="dashboard" style="width:${state.canvas.width}px;height:${state.canvas.height}px;position:relative;">
+  <main class="dashboard" style="width:${state.canvas.width}px;height:${isScrollableMode() ? 'auto' : state.canvas.height + 'px'};min-height:${isScrollableMode() ? getScrollableCanvasHeight() + 'px' : 'auto'};position:relative;">
     ${widgetHtml}
   </main>
   <script src="js/dashboard.js"></script>
@@ -1741,7 +1893,7 @@ body {
 }
 
 .dash-card-title {
-  font-size: 13px;
+  font-size: calc(13px * var(--font-scale, 1));
   font-weight: 600;
 }
 
@@ -2811,6 +2963,7 @@ async function openDirBrowser(startDir) {
     if (data.imageCount > 0) {
       html += `<div style="margin-bottom:6px;padding:4px 8px;background:var(--bg-secondary);border-radius:4px;color:#3fb950;font-size:11px;">📷 ${data.imageCount} image${data.imageCount !== 1 ? 's' : ''} in this folder</div>`;
     }
+    // Up one level
     const parent = data.path.replace(/\/[^/]+\/?$/, '') || '/';
     if (data.path !== parent) {
       html += `<div class="dir-entry" data-path="${parent}" style="cursor:pointer;padding:3px 6px;border-radius:4px;color:var(--text-primary);" onmouseover="this.style.background='var(--bg-secondary)'" onmouseout="this.style.background='none'">📁 ..</div>`;

@@ -1,6 +1,8 @@
 # 🦞 LobsterBoard
 
-A self-hosted, drag-and-drop dashboard builder with 47 widgets, custom pages, and zero cloud dependencies. One Node.js server, no frameworks, no build step needed.
+A self-hosted, drag-and-drop dashboard builder with 50 widgets, a template gallery, custom pages, and zero cloud dependencies. One Node.js server, no frameworks, no build step needed.
+
+**Works standalone or with [OpenClaw](https://github.com/openclaw/openclaw).** LobsterBoard is a general-purpose dashboard — use it to monitor your homelab, track stocks, display weather, manage todos, or anything else. OpenClaw users get bonus widgets (auth status, cron jobs, activity logs), but they're completely optional.
 
 ![LobsterBoard](lobsterboard-logo-final.png)
 
@@ -26,7 +28,8 @@ Open **http://localhost:8080** → press **Ctrl+E** to enter edit mode → drag 
 ## Features
 
 - **Drag-and-drop editor** — visual layout with 20px snap grid, resize handles, property panel
-- **47 widgets** — system monitoring, weather, calendars, RSS, smart home, finance, AI/LLM tracking, and more
+- **50 widgets** — system monitoring, weather, calendars, RSS, smart home, finance, AI/LLM tracking, notes, and more
+- **Template Gallery** — export, import, and share dashboard layouts with auto-screenshot previews; import as merge or full replace
 - **Custom pages** — extend your dashboard with full custom pages (notes, kanban boards, anything)
 - **Canvas sizes** — preset resolutions (1920×1080, 2560×1440, etc.) or custom sizes
 - **Live data** — system stats stream via Server-Sent Events, widgets auto-refresh
@@ -41,6 +44,17 @@ HOST=0.0.0.0 node server.cjs           # Expose to network
 ```
 
 Widget settings are edited in the right-hand panel during edit mode. All configuration saves to `config.json`.
+
+## Template Gallery
+
+LobsterBoard includes a built-in template system for sharing and reusing dashboard layouts.
+
+- **Export** your current dashboard as a template (auto-captures a screenshot preview)
+- **Browse** the template gallery to discover pre-built layouts
+- **Import** templates in two modes:
+  - **Replace** — swap your entire dashboard for the template
+  - **Merge** — append the template's widgets below your existing layout
+- Templates are stored in the `templates/` directory and can be shared as folders
 
 ## Widgets
 
@@ -67,6 +81,7 @@ Widget settings are edited in the right-hand panel during edit mode. All configu
 | Countdown | Timer to a target date |
 | Todo List | Persistent task list |
 | Pomodoro Timer | Work/break timer |
+| Notes | Persistent rich-text notes with auto-save |
 
 ### 📰 Media & Content
 | Widget | Description |
@@ -81,7 +96,6 @@ Widget settings are edited in the right-hand panel during edit mode. All configu
 | Widget | Description |
 |--------|-------------|
 | Claude Usage | Anthropic API spend tracking |
-| AI Usage (All) | Multi-provider usage dashboard |
 | AI Cost Tracker | Monthly cost breakdown |
 | API Status | Provider availability |
 | Active Sessions | OpenClaw session monitor |
@@ -90,7 +104,7 @@ Widget settings are edited in the right-hand panel during edit mode. All configu
 ### 💰 Finance
 | Widget | Description |
 |--------|-------------|
-| Stock Ticker | Live stock prices |
+| Stock Ticker | Live stock prices (requires API key) |
 | Crypto Price | Cryptocurrency tracker |
 
 ### 🏠 Smart Home
@@ -103,8 +117,22 @@ Widget settings are edited in the right-hand panel during edit mode. All configu
 ### 🔗 Embeds & Media
 | Widget | Description |
 |--------|-------------|
-| Image / Random Image / Web Image | Static, rotating, or remote images |
+| Image / Random Image / Web Image / Latest Image | Static, rotating, remote, or latest images (with browse button for directory selection) |
 | Iframe Embed | Embed any webpage |
+
+### 🔧 Utility
+| Widget | Description |
+|--------|-------------|
+| Auth Status | Authentication status display |
+| Sleep Score | Garmin sleep score widget |
+| GitHub Stats | Repository stats — stars, forks, open issues, open PRs |
+| Unread Emails | Email inbox counter |
+| System Log | Recent system log entries |
+| Activity List | Activity timeline |
+| Cron Jobs | Cron job status monitor |
+| LobsterBoard Release | Version update checker |
+| OpenClaw Release | OpenClaw version checker |
+| Release | Generic release tracker |
 
 ### 🎨 Layout
 | Widget | Description |
@@ -206,8 +234,15 @@ pm2 startup
 | `/api/stats/stream` | GET | Live system stats (SSE) |
 | `/api/pages` | GET | List custom pages |
 | `/api/todos` | GET/POST | Todo list data |
+| `/api/notes` | GET/POST | Notes widget data |
+| `/api/templates` | GET | List available templates |
+| `/api/templates/:id` | GET | Get template config |
+| `/api/templates/:id/preview` | GET | Template preview image |
+| `/api/templates/import` | POST | Import a template (merge/replace) |
+| `/api/templates/export` | POST | Export current dashboard as template |
 | `/api/calendar?url=` | GET | Proxy iCal feed |
 | `/api/rss?url=` | GET | Proxy RSS/Atom feed |
+| `/api/lb-release` | GET | LobsterBoard version check |
 
 ## File Structure
 
@@ -218,9 +253,13 @@ lobsterboard/
 ├── config.json         # Your saved layout
 ├── js/
 │   ├── builder.js      # Editor: drag-drop, zoom, config I/O
-│   └── widgets.js      # All 47 widget definitions
+│   ├── widgets.js      # All 50 widget definitions
+│   └── templates.js    # Template gallery & export system
 ├── css/
 │   └── builder.css     # Dark theme styles
+├── templates/          # Dashboard templates
+│   ├── templates.json  # Template index
+│   └── */              # Individual template folders
 ├── pages/              # Custom pages (auto-discovered)
 │   └── README.md       # Page creation guide
 └── package.json
@@ -228,7 +267,15 @@ lobsterboard/
 
 ## License
 
-MIT
+This project is licensed under the **Business Source License 1.1 (BSL-1.1)**.
+
+You are free to use, modify, and self-host LobsterBoard for **non-commercial purposes**. Commercial use requires a separate license. See [LICENSE](LICENSE) for full terms.
+
+## Commercial Licensing
+
+For commercial use, OEM licensing, or enterprise deployments, contact:
+
+📧 **curbob** on GitHub — [github.com/Curbob](https://github.com/Curbob)
 
 ---
 

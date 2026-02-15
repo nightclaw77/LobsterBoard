@@ -295,9 +295,30 @@ const MIME_TYPES = {
 
 const CONFIG_FILE = path.join(__dirname, 'config.json');
 
+// Scan templates directory for meta.json files
+function scanTemplates(templatesDir) {
+  const templates = [];
+  try {
+    const dirs = fs.readdirSync(templatesDir);
+    for (const dir of dirs) {
+      if (dir === 'templates.json' || dir === 'README.md' || dir.startsWith('.')) continue;
+      const metaPath = path.join(templatesDir, dir, 'meta.json');
+      if (fs.existsSync(metaPath)) {
+        try {
+          const meta = JSON.parse(fs.readFileSync(metaPath, 'utf8'));
+          templates.push(meta);
+        } catch (_) {}
+      }
+    }
+  } catch (_) {}
+  return templates;
+}
+
 // Release check cache (1 hour TTL)
 let _releaseCache = null;
 let _releaseCacheTime = 0;
+let _lbReleaseCache = null;
+let _lbReleaseCacheTime = 0;
 
 function sendResponse(res, statusCode, contentType, data, extraHeaders = {}) {
   res.writeHead(statusCode, { 'Content-Type': contentType, ...extraHeaders });
@@ -508,6 +529,42 @@ const server = http.createServer(async (req, res) => {
     }
   }
 
+  // GET/POST /api/notes - Read/write notes content
+  if (pathname === '/api/notes') {
+    const notesFile = path.join(__dirname, 'notes.json');
+    if (req.method === 'GET') {
+      fs.readFile(notesFile, 'utf8', (err, data) => {
+        if (err) {
+          if (err.code === 'ENOENT') return sendJson(res, 200, {});
+          return sendError(res, err.message);
+        }
+        try { sendJson(res, 200, JSON.parse(data)); }
+        catch (e) { sendJson(res, 200, {}); }
+      });
+      return;
+    }
+    if (req.method === 'POST') {
+      const MAX_NOTES_BODY = 512 * 1024;
+      let body = '';
+      let overflow = false;
+      req.on('data', chunk => {
+        body += chunk.toString();
+        if (body.length > MAX_NOTES_BODY) { overflow = true; req.destroy(); }
+      });
+      req.on('end', () => {
+        if (overflow) { sendError(res, 'Request body too large', 413); return; }
+        try {
+          const notes = JSON.parse(body);
+          fs.writeFile(notesFile, JSON.stringify(notes, null, 2), 'utf8', (err) => {
+            if (err) return sendError(res, err.message);
+            sendJson(res, 200, { status: 'ok' });
+          });
+        } catch (e) { sendError(res, 'Invalid JSON', 400); }
+      });
+      return;
+    }
+  }
+
   // GET /api/cron - Read cron jobs from OpenClaw cron store
   if (req.method === 'GET' && pathname === '/api/cron') {
     const cronFile = path.join(os.homedir(), '.openclaw', 'cron', 'jobs.json');
@@ -645,6 +702,40 @@ const server = http.createServer(async (req, res) => {
         sendJson(res, 200, result);
       } catch (e) {
         sendError(res, `Release check error: ${e.message}`);
+      }
+    })();
+    return;
+  }
+
+  // GET /api/lb-release - LobsterBoard version check
+  if (req.method === 'GET' && pathname === '/api/lb-release') {
+    const now = Date.now();
+    if (_lbReleaseCache && (now - _lbReleaseCacheTime) < 3600000) {
+      sendJson(res, 200, _lbReleaseCache);
+      return;
+    }
+    (async () => {
+      try {
+        let currentVersion = 'unknown';
+        try {
+          const pkgPath = path.join(__dirname, 'package.json');
+          currentVersion = JSON.parse(fs.readFileSync(pkgPath, 'utf8')).version;
+        } catch (_) {}
+
+        const ghRes = await fetch('https://api.github.com/repos/lobsterboard/lobsterboard/releases/latest');
+        const ghData = await ghRes.json();
+        const result = {
+          status: 'ok',
+          current: currentVersion,
+          latest: ghData.tag_name || currentVersion,
+          latestUrl: ghData.html_url || '',
+          publishedAt: ghData.published_at || null
+        };
+        _lbReleaseCache = result;
+        _lbReleaseCacheTime = now;
+        sendJson(res, 200, result);
+      } catch (e) {
+        sendError(res, `LB Release check error: ${e.message}`);
       }
     })();
     return;
@@ -1028,6 +1119,108 @@ const server = http.createServer(async (req, res) => {
   }
 
   // GET /api/stats/stream - SSE endpoint for live stats
+  if (req.method === 'GET' && pathname === '/api/stats/stream') {
+    if (sseClients.size >= 10) {
+      sendError(res, 'Too many SSE connections', 429);
+      return;
+    }
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive',
+      'Access-Control-Allow-Origin': '*'
+    });
+    res.write(`data: ${JSON.stringify(cachedStats)}\n\n`);
+    sseClients.add(res);
+    req.on('close', () => sseClients.delete(res));
+    return;
+  }
+
+  // ── Templates API ──
+  const TEMPLATES_DIR = path.join(__dirname, 'templates');
+
+  // GET /api/templates — list all templates
+  if (req.method === 'GET' && pathname === '/api/templates') {
+    try {
+      const templates = scanTemplates(TEMPLATES_DIR);
+      sendJson(res, 200, templates);
+    } catch (e) {
+      sendError(res, `Failed to list templates: ${e.message}`);
+    }
+    return;
+  }
+
+  // GET /api/templates/:id — get a template's config.json
+  if (req.method === 'GET' && pathname.match(/^\/api\/templates\/([^/]+)$/) && !pathname.endsWith('/preview')) {
+    const id = pathname.split('/')[3];
+    const configPath = path.join(TEMPLATES_DIR, id, 'config.json');
+    if (!fs.existsSync(configPath)) { sendJson(res, 404, { error: 'Template not found' }); return; }
+    try {
+      const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+      sendJson(res, 200, config);
+    } catch (e) { sendError(res, e.message); }
+    return;
+  }
+
+  // GET /api/templates/:id/preview — serve preview image
+  if (req.method === 'GET' && pathname.match(/^\/api\/templates\/([^/]+)\/preview$/)) {
+    const id = pathname.split('/')[3];
+    const metaPath = path.join(TEMPLATES_DIR, id, 'meta.json');
+    let previewFile = 'preview.png';
+    try { previewFile = JSON.parse(fs.readFileSync(metaPath, 'utf8')).preview || 'preview.png'; } catch (_) {}
+    const previewPath = path.join(TEMPLATES_DIR, id, previewFile);
+    if (!fs.existsSync(previewPath)) { sendResponse(res, 404, 'text/plain', 'No preview'); return; }
+    const ext = path.extname(previewPath).toLowerCase();
+    const ct = MIME_TYPES[ext] || 'application/octet-stream';
+    fs.readFile(previewPath, (err, data) => {
+      if (err) { sendResponse(res, 404, 'text/plain', 'Not found'); return; }
+      sendResponse(res, 200, ct, data);
+    });
+    return;
+  }
+
+  // POST /api/templates/import — import a template
+  if (req.method === 'POST' && pathname === '/api/templates/import') {
+    let body = '';
+    req.on('data', c => body += c);
+    req.on('end', () => {
+      try {
+        const { id, mode } = JSON.parse(body);
+        const tplConfigPath = path.join(TEMPLATES_DIR, id, 'config.json');
+        if (!fs.existsSync(tplConfigPath)) { sendJson(res, 404, { error: 'Template not found' }); return; }
+        const tplConfig = JSON.parse(fs.readFileSync(tplConfigPath, 'utf8'));
+
+        if (mode === 'replace') {
+          fs.writeFileSync(CONFIG_FILE, JSON.stringify(tplConfig, null, 2));
+          sendJson(res, 200, { status: 'success', message: 'Template imported (replace)' });
+        } else if (mode === 'merge') {
+          let currentConfig = { canvas: { width: 1920, height: 1080 }, widgets: [] };
+          try { currentConfig = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8')); } catch (_) {}
+          // Find max Y of existing widgets
+          let maxY = 0;
+          for (const w of (currentConfig.widgets || [])) {
+            const bottom = (w.y || 0) + (w.height || 100);
+            if (bottom > maxY) maxY = bottom;
+          }
+          const offset = maxY + 100;
+          const newWidgets = (tplConfig.widgets || []).map(w => ({
+            ...w,
+            id: w.id + '-tpl-' + Date.now(),
+            y: (w.y || 0) + offset
+          }));
+          currentConfig.widgets = [...(currentConfig.widgets || []), ...newWidgets];
+          fs.writeFileSync(CONFIG_FILE, JSON.stringify(currentConfig, null, 2));
+          sendJson(res, 200, { status: 'success', message: `Merged ${newWidgets.length} widgets` });
+        } else {
+          sendJson(res, 400, { error: 'Invalid mode. Use "replace" or "merge"' });
+        }
+      } catch (e) { sendError(res, e.message); }
+    });
+    return;
+  }
+
+  // POST /api/templates/export — export current config as template
+  // GET /api/quote - proxy for zenquotes.io (CORS blocked in browser)
   if (req.method === 'GET' && pathname === '/api/quote') {
     const https = require('https');
     https.get('https://zenquotes.io/api/random', { headers: { 'User-Agent': 'LobsterBoard/1.0' }, timeout: 5000 }, (proxyRes) => {
@@ -1037,7 +1230,7 @@ const server = http.createServer(async (req, res) => {
         res.setHeader('Access-Control-Allow-Origin', '*');
         sendResponse(res, 200, 'application/json', body);
       });
-    }).on('error', () => {
+    }).on('error', (e) => {
       sendResponse(res, 200, 'application/json', JSON.stringify([{ q: 'Stay hungry, stay foolish.', a: 'Steve Jobs' }]));
     });
     return;
@@ -1047,6 +1240,7 @@ const server = http.createServer(async (req, res) => {
     return latestImageHandler(parsedUrl, res);
   }
 
+  // GET /api/browse-dirs?dir=<path> - list subdirectories for folder picker
   if (req.method === 'GET' && pathname === '/api/browse-dirs') {
     const dir = parsedUrl.searchParams.get('dir') || os.homedir();
     const resolved = path.resolve(dir.replace(/^~/, os.homedir()));
@@ -1065,20 +1259,112 @@ const server = http.createServer(async (req, res) => {
     } catch (error) { sendResponse(res, 200, 'application/json', JSON.stringify({ status: 'error', message: error.message })); }
   }
 
-  if (req.method === 'GET' && pathname === '/api/stats/stream') {
-    if (sseClients.size >= 10) {
-      sendError(res, 'Too many SSE connections', 429);
-      return;
-    }
-    res.writeHead(200, {
-      'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache',
-      'Connection': 'keep-alive',
-      'Access-Control-Allow-Origin': '*'
+  if (req.method === 'POST' && pathname === '/api/templates/export') {
+    let body = '';
+    req.on('data', c => body += c);
+    req.on('end', () => {
+      try {
+        const { name, description, author, tags, widgetTypes } = JSON.parse(body);
+        if (!name) { sendJson(res, 400, { error: 'Name is required' }); return; }
+        const id = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+        const tplDir = path.join(TEMPLATES_DIR, id);
+        fs.mkdirSync(tplDir, { recursive: true });
+
+        // Read current config and strip sensitive data
+        let config = { canvas: { width: 1920, height: 1080 }, widgets: [] };
+        try { config = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8')); } catch (_) {}
+
+        const sensitiveKeys = ['apiKey', 'api_key', 'token', 'secret', 'password'];
+        const privateIpRegex = /^https?:\/\/(10\.\d+\.\d+\.\d+|192\.168\.\d+\.\d+|localhost|127\.0\.0\.1)/i;
+        const keepUrlKeys = ['icalUrl', 'feedUrl'];
+
+        function stripSensitive(props) {
+          if (!props || typeof props !== 'object') return props;
+          let stripped = false;
+          const result = Array.isArray(props) ? [...props] : { ...props };
+          for (const key of Object.keys(result)) {
+            if (sensitiveKeys.includes(key)) {
+              result[key] = 'YOUR_API_KEY_HERE';
+              stripped = true;
+            } else if ((key === 'url' || key === 'endpoint') && typeof result[key] === 'string' && privateIpRegex.test(result[key])) {
+              result[key] = 'http://your-server:port/path';
+              stripped = true;
+            } else if (!keepUrlKeys.includes(key) && typeof result[key] === 'object' && result[key] !== null) {
+              const inner = stripSensitive(result[key]);
+              result[key] = inner.result;
+              if (inner.stripped) stripped = true;
+            }
+          }
+          return { result, stripped };
+        }
+
+        const cleanWidgets = (config.widgets || []).map(w => {
+          const cleaned = { ...w };
+          if (cleaned.properties) {
+            const { result, stripped } = stripSensitive(cleaned.properties);
+            cleaned.properties = result;
+            if (stripped) cleaned._templateNote = '⚠️ Configure this widget\'s settings after import';
+          }
+          return cleaned;
+        });
+
+        const cleanConfig = { canvas: config.canvas, widgets: cleanWidgets };
+        fs.writeFileSync(path.join(tplDir, 'config.json'), JSON.stringify(cleanConfig, null, 2));
+
+        const canvasSize = config.canvas ? `${config.canvas.width}x${config.canvas.height}` : '1920x1080';
+        const meta = {
+          id,
+          name,
+          description: description || '',
+          author: author || 'anonymous',
+          tags: tags || [],
+          canvasSize,
+          widgetCount: cleanWidgets.length,
+          widgetTypes: widgetTypes || [],
+          requiresSetup: [],
+          preview: 'preview.png'
+        };
+        fs.writeFileSync(path.join(tplDir, 'meta.json'), JSON.stringify(meta, null, 2));
+
+        // Rebuild templates.json
+        const templates = scanTemplates(TEMPLATES_DIR);
+        fs.writeFileSync(path.join(TEMPLATES_DIR, 'templates.json'), JSON.stringify(templates, null, 2));
+
+        sendJson(res, 200, { status: 'success', id, message: `Template "${name}" exported` });
+      } catch (e) { sendError(res, e.message); }
     });
-    res.write(`data: ${JSON.stringify(cachedStats)}\n\n`);
-    sseClients.add(res);
-    req.on('close', () => sseClients.delete(res));
+    return;
+  }
+
+  // POST /api/templates/:id/screenshot — upload preview image
+  if (req.method === 'POST' && pathname.match(/^\/api\/templates\/[^/]+\/screenshot$/)) {
+    const tplId = pathname.split('/')[3];
+    const tplDir = path.join(TEMPLATES_DIR, tplId);
+    if (!fs.existsSync(tplDir)) { sendJson(res, 404, { error: 'Template not found' }); return; }
+    let body = '';
+    req.on('data', c => body += c);
+    req.on('end', () => {
+      try {
+        const { data } = JSON.parse(body);
+        const match = data.match(/^data:image\/(\w+);base64,(.+)$/);
+        if (!match) { sendJson(res, 400, { error: 'Invalid image data' }); return; }
+        const buf = Buffer.from(match[2], 'base64');
+        fs.writeFileSync(path.join(tplDir, 'preview.png'), buf);
+        sendJson(res, 200, { status: 'ok' });
+      } catch (e) { sendError(res, e.message); }
+    });
+    return;
+  }
+
+  // DELETE /api/templates/:id — delete a template
+  if (req.method === 'DELETE' && pathname.match(/^\/api\/templates\/[^/]+$/)) {
+    const tplId = pathname.split('/')[3];
+    const tplDir = path.join(TEMPLATES_DIR, tplId);
+    if (!fs.existsSync(tplDir)) { sendJson(res, 404, { error: 'Template not found' }); return; }
+    try {
+      fs.rmSync(tplDir, { recursive: true, force: true });
+      sendJson(res, 200, { status: 'success', message: `Template "${tplId}" deleted` });
+    } catch (e) { sendError(res, e.message); }
     return;
   }
 
@@ -1112,6 +1398,7 @@ const server = http.createServer(async (req, res) => {
 });
 
 // GET /api/latest-image?dir=<path> - newest image from a directory
+// (inserted before graceful shutdown)
 const latestImageHandler = (parsedUrl, res) => {
   const dir = parsedUrl.searchParams.get('dir');
   if (!dir) return sendResponse(res, 200, 'application/json', JSON.stringify({ status: 'error', message: 'Missing dir parameter' }));

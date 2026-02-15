@@ -87,9 +87,9 @@ const WIDGETS = {
           <span class="dash-card-title">🌡️ ${props.title || 'Local Weather'}</span>
         </div>
         <div class="dash-card-body" style="display:flex;align-items:center;justify-content:center;gap:10px;">
-          <span id="${props.id}-icon" style="font-size:24px;">🌡️</span>
+          <span id="${props.id}-icon" style="font-size:calc(24px * var(--font-scale, 1));">🌡️</span>
           <div>
-            <div class="kpi-value blue" id="${props.id}-value">—</div>
+            <div class="kpi-value blue" id="${props.id}-value">Loading...</div>
             <div class="kpi-label" id="${props.id}-label">${props.location || 'Location'}</div>
           </div>
         </div>
@@ -97,6 +97,9 @@ const WIDGETS = {
     generateJs: (props) => `
       // Weather Widget: ${props.id} (uses free wttr.in API - no key needed)
       async function update_${props.id.replace(/-/g, '_')}() {
+        const valEl = document.getElementById('${props.id}-value');
+        const labelEl = document.getElementById('${props.id}-label');
+        const iconEl = document.getElementById('${props.id}-icon');
         try {
           const location = encodeURIComponent('${props.location || 'Atlanta'}');
           const res = await fetch('https://wttr.in/' + location + '?format=j1');
@@ -104,8 +107,8 @@ const WIDGETS = {
           const current = data.current_condition[0];
           const temp = '${props.units}' === 'C' ? current.temp_C : current.temp_F;
           const unit = '${props.units}' === 'C' ? '°C' : '°F';
-          document.getElementById('${props.id}-value').textContent = temp + unit;
-          document.getElementById('${props.id}-label').textContent = current.weatherDesc[0].value;
+          valEl.textContent = temp + unit;
+          labelEl.textContent = current.weatherDesc[0].value;
           // Update icon based on condition
           const code = parseInt(current.weatherCode);
           let icon = '🌡️';
@@ -113,11 +116,12 @@ const WIDGETS = {
           else if (code === 116 || code === 119) icon = '⛅';
           else if (code >= 176 && code <= 359) icon = '🌧️';
           else if (code >= 368 && code <= 395) icon = '❄️';
-          document.getElementById('${props.id}-icon').textContent = icon;
+          iconEl.textContent = icon;
         } catch (e) {
           console.error('Weather widget error:', e);
-          document.getElementById('${props.id}-value').textContent = '—';
+          if (!valEl.dataset.loaded) valEl.textContent = 'Unavailable';
         }
+        valEl.dataset.loaded = '1';
       }
       update_${props.id.replace(/-/g, '_')}();
       setInterval(update_${props.id.replace(/-/g, '_')}, ${(props.refreshInterval || 600) * 1000});
@@ -295,6 +299,83 @@ const WIDGETS = {
     `
   },
 
+  'lobsterboard-release': {
+    name: 'LobsterBoard Release',
+    icon: '🦞',
+    category: 'small',
+    description: 'Auto-detects running LobsterBoard version and compares to latest GitHub release.',
+    defaultWidth: 200,
+    defaultHeight: 120,
+    hasApiKey: false,
+    properties: {
+      title: 'LobsterBoard',
+      refreshInterval: 3600
+    },
+    preview: `<div style="text-align:center;padding:8px;">
+      <div style="font-size:13px;">v0.1.5</div>
+      <div style="font-size:11px;color:#3fb950;">✓ Up to date</div>
+    </div>`,
+    generateHtml: (props) => `
+      <div class="dash-card" id="widget-${props.id}" style="height:100%;">
+        <div class="dash-card-head">
+          <span class="dash-card-title">🦞 ${props.title || 'LobsterBoard'}</span>
+        </div>
+        <div class="dash-card-body" style="display:flex;align-items:center;gap:10px;padding:8px 12px;">
+          <span style="font-size:calc(20px * var(--font-scale, 1));">🦞</span>
+          <div>
+            <div id="${props.id}-versions" style="display:flex;align-items:center;gap:6px;font-size:calc(13px * var(--font-scale, 1));color:#c9d1d9;">
+              <span id="${props.id}-current">—</span>
+              <span id="${props.id}-arrow" style="color:#6e7681;display:none;">→</span>
+              <span id="${props.id}-latest" style="display:none;"></span>
+            </div>
+            <div id="${props.id}-status" style="font-size:calc(11px * var(--font-scale, 1));margin-top:2px;">Checking...</div>
+          </div>
+        </div>
+      </div>`,
+    generateJs: (props) => `
+      async function update_${props.id.replace(/-/g, '_')}() {
+        const currentEl = document.getElementById('${props.id}-current');
+        const arrowEl = document.getElementById('${props.id}-arrow');
+        const latestEl = document.getElementById('${props.id}-latest');
+        const statusEl = document.getElementById('${props.id}-status');
+        
+        try {
+          const res = await fetch('/api/lb-release');
+          const data = await res.json();
+          if (data.status !== 'ok') throw new Error(data.message);
+          
+          const cur = (data.current || '').replace(/^v/, '');
+          const lat = (data.latest || '').replace(/^v/, '');
+          
+          if (!cur || cur === 'unknown') {
+            currentEl.textContent = 'v' + lat;
+            statusEl.textContent = 'Latest release';
+            statusEl.style.color = '#8b949e';
+          } else if (cur === lat) {
+            currentEl.textContent = 'v' + cur;
+            currentEl.style.color = '#3fb950';
+            statusEl.innerHTML = '✓ Up to date';
+            statusEl.style.color = '#3fb950';
+          } else {
+            currentEl.textContent = cur;
+            currentEl.style.color = '#c9d1d9';
+            arrowEl.style.display = 'inline';
+            latestEl.style.display = 'inline';
+            latestEl.textContent = 'v' + lat;
+            latestEl.style.color = '#58a6ff';
+            statusEl.innerHTML = '<span style="color:#d29922;">Update available</span>';
+          }
+        } catch (e) {
+          currentEl.textContent = '—';
+          statusEl.textContent = 'Error';
+          console.error('LobsterBoard Release widget error:', e);
+        }
+      }
+      update_${props.id.replace(/-/g, '_')}();
+      setInterval(update_${props.id.replace(/-/g, '_')}, ${(props.refreshInterval || 3600) * 1000});
+    `
+  },
+
   'openclaw-release': {
     name: 'OpenClaw Release',
     icon: '🦞',
@@ -318,14 +399,14 @@ const WIDGETS = {
           <span class="dash-card-title">🦞 ${props.title || 'OpenClaw'}</span>
         </div>
         <div class="dash-card-body" style="display:flex;align-items:center;gap:10px;padding:8px 12px;">
-          <span style="font-size:20px;">📦</span>
+          <span style="font-size:calc(20px * var(--font-scale, 1));">📦</span>
           <div>
-            <div id="${props.id}-versions" style="display:flex;align-items:center;gap:6px;font-size:13px;color:#c9d1d9;">
+            <div id="${props.id}-versions" style="display:flex;align-items:center;gap:6px;font-size:calc(13px * var(--font-scale, 1));color:#c9d1d9;">
               <span id="${props.id}-current">—</span>
               <span id="${props.id}-arrow" style="color:#6e7681;display:none;">→</span>
               <span id="${props.id}-latest" style="display:none;"></span>
             </div>
-            <div id="${props.id}-status" style="font-size:11px;margin-top:2px;">Checking...</div>
+            <div id="${props.id}-status" style="font-size:calc(11px * var(--font-scale, 1));margin-top:2px;">Checking...</div>
           </div>
         </div>
       </div>`,
@@ -396,42 +477,54 @@ const WIDGETS = {
         <div class="dash-card-head">
           <span class="dash-card-title">📦 ${props.title || 'Release'}</span>
         </div>
-        <div class="dash-card-body" style="display:flex;flex-direction:column;align-items:center;justify-content:center;">
-          <div class="kpi-value" id="${props.id}-version" style="font-size:16px;">—</div>
-          <div class="kpi-label" id="${props.id}-status">Checking...</div>
+        <div class="dash-card-body" style="display:flex;align-items:center;gap:10px;padding:8px 12px;">
+          <span style="font-size:calc(20px * var(--font-scale, 1));">📦</span>
+          <div>
+            <div id="${props.id}-versions" style="display:flex;align-items:center;gap:6px;font-size:calc(13px * var(--font-scale, 1));color:#c9d1d9;">
+              <span id="${props.id}-current">—</span>
+              <span id="${props.id}-arrow" style="color:#6e7681;display:none;">→</span>
+              <span id="${props.id}-latest" style="display:none;"></span>
+            </div>
+            <div id="${props.id}-status" style="font-size:calc(11px * var(--font-scale, 1));margin-top:2px;">Checking...</div>
+          </div>
         </div>
       </div>`,
     generateJs: (props) => `
       // Release Widget: ${props.id}
       async function update_${props.id.replace(/-/g, '_')}() {
         const currentVersion = '${props.currentVersion || ''}'.replace(/^v/, '');
-        const versionEl = document.getElementById('${props.id}-version');
+        const currentEl = document.getElementById('${props.id}-current');
+        const arrowEl = document.getElementById('${props.id}-arrow');
+        const latestEl = document.getElementById('${props.id}-latest');
         const statusEl = document.getElementById('${props.id}-status');
         
         try {
           const res = await fetch('https://api.github.com/repos/${props.repo || 'openclaw/openclaw'}/releases/latest');
           const data = await res.json();
-          const latestVersion = (data.tag_name || '').replace(/^v/, '');
+          const lat = (data.tag_name || '').replace(/^v/, '');
           
           if (!currentVersion) {
-            versionEl.textContent = 'v' + latestVersion;
+            currentEl.textContent = 'v' + lat;
             statusEl.textContent = 'Latest release';
-            versionEl.style.color = 'var(--text-primary)';
-          } else if (currentVersion === latestVersion) {
-            versionEl.textContent = 'v' + latestVersion;
-            versionEl.style.color = 'var(--accent-green)';
+            statusEl.style.color = '#8b949e';
+          } else if (currentVersion === lat) {
+            currentEl.textContent = 'v' + currentVersion;
+            currentEl.style.color = '#3fb950';
             statusEl.innerHTML = '✓ Up to date';
-            statusEl.style.color = 'var(--accent-green)';
+            statusEl.style.color = '#3fb950';
           } else {
-            versionEl.textContent = 'v' + latestVersion;
-            versionEl.style.color = 'var(--accent-blue)';
-            statusEl.innerHTML = '⬆ Update available (v' + currentVersion + ')';
-            statusEl.style.color = 'var(--accent-blue)';
+            currentEl.textContent = currentVersion;
+            currentEl.style.color = '#c9d1d9';
+            arrowEl.style.display = 'inline';
+            latestEl.style.display = 'inline';
+            latestEl.textContent = 'v' + lat;
+            latestEl.style.color = '#58a6ff';
+            statusEl.innerHTML = '<span style="color:#d29922;">Update available</span>';
           }
         } catch (e) {
           console.error('Release widget error:', e);
-          versionEl.textContent = '—';
-          statusEl.textContent = '—';
+          currentEl.textContent = '—';
+          statusEl.textContent = 'Error';
         }
       }
       update_${props.id.replace(/-/g, '_')}();
@@ -700,10 +793,10 @@ const WIDGETS = {
             const msg = (entry.message || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
             const cat = (entry.category || '').replace(/</g, '&lt;');
             return '<div class="syslog-entry ' + cls + '" style="display:flex;align-items:flex-start;gap:6px;padding:3px 0;border-bottom:1px solid #30363d;font-size:' + fs + ';line-height:1.3;" title="' + msg + '">' +
-              '<span class="syslog-icon" style="flex-shrink:0;width:14px;text-align:center;font-size:10px;">' + icon + '</span>' +
-              '<span class="syslog-time" style="flex-shrink:0;color:#8b949e;font-size:10px;font-family:monospace;min-width:55px;">' + time + '</span>' +
+              '<span class="syslog-icon" style="flex-shrink:0;width:14px;text-align:center;font-size:calc(10px * var(--font-scale, 1));">' + icon + '</span>' +
+              '<span class="syslog-time" style="flex-shrink:0;color:#8b949e;font-size:calc(10px * var(--font-scale, 1));font-family:monospace;min-width:55px;">' + time + '</span>' +
               '<span class="syslog-msg" style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:' + (cls === 'error' ? '#f85149' : cls === 'warn' ? '#d29922' : cls === 'ok' ? '#3fb950' : '#c9d1d9') + ';">' + msg + '</span>' +
-              '<span class="syslog-cat" style="flex-shrink:0;font-size:9px;padding:1px 4px;border-radius:3px;background:#161b22;color:#8b949e;font-family:monospace;">' + cat + '</span>' +
+              '<span class="syslog-cat" style="flex-shrink:0;font-size:calc(9px * var(--font-scale, 1));padding:1px 4px;border-radius:3px;background:#161b22;color:#8b949e;font-family:monospace;">' + cat + '</span>' +
             '</div>';
           }).join('');
           if (wasAtBottom) log.scrollTop = log.scrollHeight;
@@ -781,29 +874,83 @@ const WIDGETS = {
     name: 'Notes',
     icon: '📝',
     category: 'large',
-    description: 'Simple note-taking widget. Requires storage backend.',
+    description: 'Simple note-taking widget with persistent storage.',
     defaultWidth: 350,
-    defaultHeight: 250,
+    defaultHeight: 300,
     hasApiKey: false,
     properties: {
-      title: 'Notes',
-      content: 'Your notes here...'
+      title: 'Notes'
     },
-    preview: `<div style="padding:4px;font-size:11px;color:#8b949e;">
-      Your notes here...
+    preview: `<div style="padding:4px;font-size:11px;">
+      <div>📝 Remember to check logs</div>
+      <div>📝 Update docs</div>
     </div>`,
     generateHtml: (props) => `
       <div class="dash-card" id="widget-${props.id}" style="height:100%;">
         <div class="dash-card-head">
           <span class="dash-card-title">📝 ${props.title || 'Notes'}</span>
+          <span class="dash-card-badge" id="${props.id}-badge">0</span>
         </div>
-        <div class="dash-card-body" id="${props.id}-content" contenteditable="true" style="white-space:pre-wrap;">
-          ${props.content || 'Your notes here...'}
+        <div class="dash-card-body" style="display:flex;flex-direction:column;height:100%;overflow:hidden;">
+          <div style="display:flex;gap:6px;padding:0 0 8px 0;flex-shrink:0;">
+            <textarea id="${props.id}-input" placeholder="Add a note..." rows="2" style="flex:1;background:var(--bg-tertiary);border:1px solid var(--border);border-radius:4px;padding:4px 8px;color:var(--text-primary);font-size:calc(12px * var(--font-scale, 1));resize:none;font-family:inherit;"></textarea>
+            <button id="${props.id}-add-btn" style="background:var(--accent-blue);color:#fff;border:none;border-radius:4px;padding:4px 10px;cursor:pointer;font-size:calc(12px * var(--font-scale, 1));align-self:flex-end;">Add</button>
+          </div>
+          <div id="${props.id}-list" style="flex:1;overflow-y:auto;"></div>
         </div>
       </div>`,
     generateJs: (props) => `
       // Notes Widget: ${props.id}
-      // Notes are editable directly in the dashboard
+      (function() {
+        let notes = [];
+        const container = document.getElementById('${props.id}-list');
+        const input = document.getElementById('${props.id}-input');
+        const addBtn = document.getElementById('${props.id}-add-btn');
+        const badge = document.getElementById('${props.id}-badge');
+
+        function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/\\n/g,'<br>'); }
+
+        function render() {
+          badge.textContent = notes.length;
+          container.innerHTML = notes.map((n, i) =>
+            '<div style="display:flex;align-items:flex-start;gap:6px;padding:4px 0;border-bottom:1px solid var(--border);font-size:calc(13px * var(--font-scale, 1));">' +
+              '<span style="flex:1;white-space:pre-wrap;word-break:break-word;">' + esc(n.text) + '</span>' +
+              '<button data-del="' + i + '" style="background:none;border:none;color:var(--accent-red,#f85149);cursor:pointer;font-size:calc(14px * var(--font-scale, 1));padding:0 4px;flex-shrink:0;">✕</button>' +
+            '</div>'
+          ).join('');
+        }
+
+        function save() {
+          fetch('/api/notes').then(r => r.json()).then(all => {
+            all['${props.id}'] = notes;
+            return fetch('/api/notes', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(all) });
+          }).catch(() => {});
+        }
+
+        container.addEventListener('click', function(e) {
+          if (e.target.dataset.del != null) {
+            notes.splice(parseInt(e.target.dataset.del), 1);
+            save(); render();
+          }
+        });
+
+        addBtn.addEventListener('click', function() {
+          const text = input.value.trim();
+          if (!text) return;
+          notes.push({ text: text, ts: Date.now() });
+          input.value = '';
+          save(); render();
+        });
+
+        input.addEventListener('keydown', function(e) {
+          if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); addBtn.click(); }
+        });
+
+        fetch('/api/notes').then(r => r.json()).then(all => {
+          notes = Array.isArray(all['${props.id}']) ? all['${props.id}'] : [];
+          render();
+        }).catch(() => render());
+      })();
     `
   },
 
@@ -916,9 +1063,9 @@ const WIDGETS = {
           <span class="dash-card-title">🟣 ${props.title || 'Claude'}</span>
         </div>
         <div class="dash-card-body" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;">
-          <div class="kpi-value" id="${props.id}-tokens" style="color:#a371f7;font-size:22px;">—</div>
-          <div class="kpi-label" id="${props.id}-cost" style="font-size:12px;">today</div>
-          <div id="${props.id}-period" style="font-size:10px;color:#6e7681;margin-top:4px;text-align:center;"></div>
+          <div class="kpi-value" id="${props.id}-tokens" style="color:#a371f7;font-size:calc(22px * var(--font-scale, 1));">—</div>
+          <div class="kpi-label" id="${props.id}-cost" style="font-size:calc(12px * var(--font-scale, 1));">today</div>
+          <div id="${props.id}-period" style="font-size:calc(10px * var(--font-scale, 1));color:#6e7681;margin-top:4px;text-align:center;"></div>
         </div>
       </div>`,
     generateJs: (props) => `
@@ -1585,7 +1732,7 @@ const WIDGETS = {
             '<div class="todo-item" style="display:flex;align-items:center;gap:6px;padding:3px 0;font-size:calc(13px * var(--font-scale, 1));">' +
               '<input type="checkbox" data-idx="' + i + '"' + (t.done ? ' checked' : '') + '>' +
               '<span style="flex:1;' + (t.done ? 'text-decoration:line-through;opacity:0.5;' : '') + '">' + esc(t.text) + '</span>' +
-              '<button data-del="' + i + '" style="background:none;border:none;color:var(--accent-red,#f85149);cursor:pointer;font-size:14px;padding:0 4px;">✕</button>' +
+              '<button data-del="' + i + '" style="background:none;border:none;color:var(--accent-red,#f85149);cursor:pointer;font-size:calc(14px * var(--font-scale, 1));padding:0 4px;">✕</button>' +
             '</div>'
           ).join('');
         }
@@ -1790,46 +1937,75 @@ const WIDGETS = {
     description: 'Shows GitHub user/repo stats. Optional token for higher rate limits.',
     defaultWidth: 380,
     defaultHeight: 200,
-    hasApiKey: true,
-    apiKeyName: 'GITHUB_TOKEN',
+    hasApiKey: false,
     properties: {
       title: 'GitHub',
-      username: 'your-username',
-      refreshInterval: 300
+      username: 'openclaw',
+      repo: 'openclaw',
+      apiKey: '',
+      refreshInterval: 1800
     },
     preview: `<div style="padding:4px;font-size:11px;">
-      <div>⭐ 142 stars</div>
-      <div>🔀 23 PRs this month</div>
-      <div>📦 8 repos</div>
+      <div>⭐ 142 stars · 🍴 23 forks</div>
+      <div>🐛 8 open issues</div>
+      <div>📅 Last push: 2h ago</div>
     </div>`,
     generateHtml: (props) => `
       <div class="dash-card" id="widget-${props.id}" style="height:100%;">
         <div class="dash-card-head">
           <span class="dash-card-title">🐙 ${props.title || 'GitHub'}</span>
         </div>
-        <div class="dash-card-body" id="${props.id}-stats">
-          <div class="gh-stat">📦 42 repos</div>
-          <div class="gh-stat">👥 128 followers</div>
-          <div class="gh-stat">⭐ 1.2K stars</div>
+        <div class="dash-card-body" id="${props.id}-stats" style="font-size:calc(13px * var(--font-scale, 1));">
+          <div style="color:var(--text-muted);">Loading...</div>
         </div>
       </div>`,
     generateJs: (props) => `
       // GitHub Stats Widget: ${props.id}
       async function update_${props.id.replace(/-/g, '_')}() {
+        const owner = '${props.username || 'openclaw'}';
+        const repo = '${props.repo || 'openclaw'}';
+        const headers = {};
+        ${props.apiKey ? `headers['Authorization'] = 'token ${props.apiKey}';` : ''}
         try {
-          const res = await fetch('https://api.github.com/users/${props.username || 'octocat'}');
-          const data = await res.json();
-          document.getElementById('${props.id}-stats').innerHTML = 
-            '<div class="gh-stat">📦 ' + data.public_repos + ' repos</div>' +
-            '<div class="gh-stat">👥 ' + data.followers + ' followers</div>' +
-            '<div class="gh-stat">🔗 ' + data.following + ' following</div>';
+          const [repoRes, prRes] = await Promise.all([
+            fetch('https://api.github.com/repos/' + owner + '/' + repo, { headers }),
+            fetch('https://api.github.com/repos/' + owner + '/' + repo + '/pulls?state=open&per_page=1', { headers })
+          ]);
+          if (!repoRes.ok) throw new Error(repoRes.status);
+          const d = await repoRes.json();
+          // Get open PR count from Link header (total_count) or array length
+          let openPRs = '?';
+          if (prRes.ok) {
+            const link = prRes.headers.get('Link') || '';
+            const lastMatch = link.match(/page=(\\d+)>; rel="last"/);
+            openPRs = lastMatch ? lastMatch[1] : (await prRes.json()).length;
+          }
+          function timeAgo(date) {
+            const s = Math.floor((Date.now() - new Date(date)) / 1000);
+            if (s < 60) return s + 's ago';
+            if (s < 3600) return Math.floor(s/60) + 'm ago';
+            if (s < 86400) return Math.floor(s/3600) + 'h ago';
+            return Math.floor(s/86400) + 'd ago';
+          }
+          const el = document.getElementById('${props.id}-stats');
+          el.innerHTML =
+            '<div style="margin-bottom:6px;font-weight:600;color:var(--text-primary);">' + owner + '/' + repo + '</div>' +
+            '<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;">' +
+              '<div>⭐ ' + d.stargazers_count.toLocaleString() + ' stars</div>' +
+              '<div>🍴 ' + d.forks_count.toLocaleString() + ' forks</div>' +
+              '<div>🐛 ' + d.open_issues_count + ' open issues</div>' +
+              '<div>🔀 ' + openPRs + ' open PRs</div>' +
+            '</div>' +
+            '<div style="margin-top:6px;color:var(--text-secondary);font-size:calc(11px * var(--font-scale, 1));">' +
+              '📅 Last push: ' + timeAgo(d.pushed_at) +
+            '</div>';
         } catch (e) {
           console.error('GitHub stats widget error:', e);
-          document.getElementById('${props.id}-stats').innerHTML = '<div class="gh-stat">—</div>';
+          document.getElementById('${props.id}-stats').innerHTML = '<div style="color:var(--accent-red,#f85149);">Failed to load repo stats</div>';
         }
       }
       update_${props.id.replace(/-/g, '_')}();
-      setInterval(update_${props.id.replace(/-/g, '_')}, ${(props.refreshInterval || 300) * 1000});
+      setInterval(update_${props.id.replace(/-/g, '_')}, ${(props.refreshInterval || 1800) * 1000});
     `
   },
 
@@ -1840,48 +2016,61 @@ const WIDGETS = {
   'stock-ticker': {
     name: 'Stock Ticker',
     icon: '📈',
-    category: 'small',
-    description: 'Shows stock prices. Requires Finnhub or similar API key.',
-    defaultWidth: 200,
-    defaultHeight: 130,
+    category: 'bar',
+    description: 'Scrolling stock ticker with multiple symbols. Free API key required — sign up at finnhub.io/register (60 calls/min free). Enter symbols separated by commas (e.g. AAPL, MSFT, GOOGL).',
+    defaultWidth: 1920,
+    defaultHeight: 40,
     hasApiKey: true,
-    apiKeyName: 'STOCK_API_KEY',
+    apiKeyName: 'FINNHUB_API_KEY',
+    hideApiKeyVar: true,
     properties: {
-      title: 'Stock',
-      symbol: 'AAPL',
+      title: 'Stocks',
+      symbol: 'AAPL, MSFT, GOOGL, AMZN, TSLA',
+      apiKey: '',
+      apiKeyNote: 'Get a free key at finnhub.io/register',
       refreshInterval: 60
     },
-    preview: `<div style="text-align:center;padding:8px;">
-      <div style="font-size:12px;color:#8b949e;">AAPL</div>
-      <div style="font-size:20px;">$185.42</div>
-      <div style="font-size:11px;color:#3fb950;">+1.2%</div>
+    preview: `<div style="background:#161b22;padding:8px;font-size:11px;overflow:hidden;">
+      📈 AAPL $185.42 <span style="color:#3fb950;">+1.2%</span> •• MSFT $420.15 <span style="color:#f85149;">-0.3%</span> •• GOOGL $175.80 <span style="color:#3fb950;">+0.8%</span>
     </div>`,
     generateHtml: (props) => `
-      <div class="dash-card" id="widget-${props.id}" style="height:100%;">
-        <div class="dash-card-head">
-          <span class="dash-card-title">📈 ${props.symbol || 'AAPL'}</span>
+      <section class="news-ticker-wrap" id="widget-${props.id}">
+        <span class="ticker-label">📈</span>
+        <div class="ticker-track">
+          <div class="ticker-content" id="${props.id}-ticker">${props.apiKey ? 'Loading stocks...' : 'Set API key in Edit Mode (Ctrl+E) — free at finnhub.io/register'}</div>
         </div>
-        <div class="dash-card-body" style="display:flex;flex-direction:column;align-items:center;justify-content:center;">
-          <div class="kpi-value" id="${props.id}-price">—</div>
-          <div class="kpi-label" id="${props.id}-change">—</div>
-        </div>
-      </div>`,
+      </section>`,
     generateJs: (props) => `
-      // Stock Ticker Widget: ${props.id}
       async function update_${props.id.replace(/-/g, '_')}() {
-        // Replace with your stock API (Alpha Vantage, Finnhub, etc.)
-        try {
-          const apiKey = 'YOUR_STOCK_API_KEY';
-          const res = await fetch('https://finnhub.io/api/v1/quote?symbol=${props.symbol || 'AAPL'}&token=' + apiKey);
-          const data = await res.json();
-          document.getElementById('${props.id}-price').textContent = '$' + (data.c || 0).toFixed(2);
-          const change = ((data.c - data.pc) / data.pc * 100).toFixed(2);
-          const changeEl = document.getElementById('${props.id}-change');
-          changeEl.textContent = (change >= 0 ? '+' : '') + change + '%';
-          changeEl.className = 'stock-change ' + (change >= 0 ? 'green' : 'red');
-        } catch (e) {
-          document.getElementById('${props.id}-price').textContent = '—';
+        const el = document.getElementById('${props.id}-ticker');
+        if (!el) return;
+        const apiKey = '${props.apiKey || ''}';
+        if (!apiKey) {
+          el.innerHTML = 'Set API key in Edit Mode — <a href="https://finnhub.io/register" target="_blank" style="color:#58a6ff;">get free key →</a>';
+          return;
         }
+        const symbols = '${props.symbol || 'AAPL'}'.split(',').map(s => s.trim()).filter(Boolean);
+        try {
+          const results = await Promise.all(symbols.map(async (sym) => {
+            try {
+              const res = await fetch('https://finnhub.io/api/v1/quote?symbol=' + sym + '&token=' + apiKey);
+              const data = await res.json();
+              if (data.c === 0 && data.h === 0) return '<span class="ticker-link" style="color:#8b949e;">' + sym + ' —</span>';
+              const change = ((data.c - data.pc) / data.pc * 100).toFixed(2);
+              const color = change >= 0 ? '#3fb950' : '#f85149';
+              const arrow = change >= 0 ? '▲' : '▼';
+              return '<span class="ticker-link" style="cursor:default;">' +
+                '<strong>' + sym + '</strong> $' + data.c.toFixed(2) +
+                ' <span style="color:' + color + ';">' + arrow + ' ' + (change >= 0 ? '+' : '') + change + '%</span></span>';
+            } catch (_) {
+              return '<span class="ticker-link" style="color:#8b949e;">' + sym + ' —</span>';
+            }
+          }));
+          el.innerHTML = results.join('<span class="ticker-sep"> \\u2022\\u2022\\u2022 </span>');
+        } catch (e) {
+          if (!el.dataset.loaded) el.textContent = 'Failed to load stocks';
+        }
+        el.dataset.loaded = '1';
       }
       update_${props.id.replace(/-/g, '_')}();
       setInterval(update_${props.id.replace(/-/g, '_')}, ${(props.refreshInterval || 60) * 1000});
@@ -1900,7 +2089,7 @@ const WIDGETS = {
       title: 'Crypto',
       coin: 'bitcoin',
       currency: 'usd',
-      refreshInterval: 30
+      refreshInterval: 60
     },
     preview: `<div style="text-align:center;padding:8px;">
       <div style="font-size:12px;color:#f7931a;">₿ BTC</div>
@@ -1913,25 +2102,40 @@ const WIDGETS = {
           <span class="dash-card-title">₿ ${props.coin?.toUpperCase() || 'BTC'}</span>
         </div>
         <div class="dash-card-body" style="display:flex;flex-direction:column;align-items:center;justify-content:center;">
-          <div class="kpi-value" id="${props.id}-price">—</div>
-          <div class="kpi-label" id="${props.id}-change">—</div>
+          <div class="kpi-value" id="${props.id}-price" style="position:relative;">
+            <span id="${props.id}-price-text">Loading...</span>
+            <span id="${props.id}-spinner" style="position:absolute;top:-2px;right:-14px;font-size:10px;opacity:0.5;display:none;">↻</span>
+          </div>
+          <div class="kpi-label" id="${props.id}-change">&nbsp;</div>
+          <div id="${props.id}-stale" style="font-size:9px;color:#d29922;margin-top:2px;display:none;">⚠ stale</div>
         </div>
       </div>`,
     generateJs: (props) => `
       // Crypto Price Widget: ${props.id}
       async function update_${props.id.replace(/-/g, '_')}() {
+        const priceText = document.getElementById('${props.id}-price-text');
+        const changeEl = document.getElementById('${props.id}-change');
+        const spinner = document.getElementById('${props.id}-spinner');
+        const staleEl = document.getElementById('${props.id}-stale');
+        const hasData = priceText.dataset.loaded;
+        if (hasData) spinner.style.display = 'inline';
         try {
           const res = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=${props.coin || 'bitcoin'}&vs_currencies=${props.currency || 'usd'}&include_24hr_change=true');
           const data = await res.json();
           const coin = data['${props.coin || 'bitcoin'}'];
-          document.getElementById('${props.id}-price').textContent = '$' + (coin['${props.currency || 'usd'}'] || 0).toLocaleString();
+          priceText.textContent = '$' + (coin['${props.currency || 'usd'}'] || 0).toLocaleString();
+          priceText.dataset.loaded = '1';
+          priceText.style.opacity = '1';
+          staleEl.style.display = 'none';
           const change = coin['${props.currency || 'usd'}_24h_change']?.toFixed(2) || 0;
-          const changeEl = document.getElementById('${props.id}-change');
           changeEl.textContent = (change >= 0 ? '+' : '') + change + '%';
           changeEl.className = 'crypto-change ' + (change >= 0 ? 'green' : 'red');
         } catch (e) {
-          document.getElementById('${props.id}-price').textContent = '—';
+          if (!hasData) priceText.textContent = 'Unavailable';
+          priceText.style.opacity = '0.5';
+          staleEl.style.display = 'block';
         }
+        spinner.style.display = 'none';
       }
       update_${props.id.replace(/-/g, '_')}();
       setInterval(update_${props.id.replace(/-/g, '_')}, ${(props.refreshInterval || 30) * 1000});
@@ -2140,7 +2344,7 @@ const WIDGETS = {
     hasApiKey: false,
     properties: {
       title: 'Quote',
-      category: 'inspire',
+      maxLength: 0,
       refreshInterval: 3600
     },
     preview: `<div style="padding:8px;font-size:12px;font-style:italic;">
@@ -2154,22 +2358,32 @@ const WIDGETS = {
         </div>
         <div class="dash-card-body" style="display:flex;flex-direction:column;justify-content:center;">
           <div class="quote-text" id="${props.id}-text" style="font-style:italic;">Loading quote...</div>
-          <div class="quote-author" id="${props.id}-author" style="margin-top:8px;color:var(--text-muted);font-size:11px;">—</div>
+          <div class="quote-author" id="${props.id}-author" style="margin-top:8px;color:var(--text-muted);font-size:calc(11px * var(--font-scale, 1));">—</div>
         </div>
       </div>`,
     generateJs: (props) => `
       // Quote of Day Widget: ${props.id}
       async function update_${props.id.replace(/-/g, '_')}() {
+        const maxLen = ${props.maxLength || 0};
+        const maxRetries = maxLen > 0 ? 5 : 1;
         try {
+          for (let i = 0; i < maxRetries; i++) {
+            const res = await fetch('/api/quote');
+            const data = await res.json();
+            const quote = data[0];
+            if (!maxLen || quote.q.length <= maxLen) {
+              document.getElementById('${props.id}-text').textContent = '\\u201c' + quote.q + '\\u201d';
+              document.getElementById('${props.id}-author').textContent = '— ' + quote.a;
+              return;
+            }
+          }
+          // All retries exceeded maxLength, use last one anyway
           const res = await fetch('/api/quote');
           const data = await res.json();
-          const quote = Array.isArray(data) ? data[0] : data;
-          const text = quote.q || quote.content || '';
-          const author = quote.a || quote.author || 'Unknown';
-          document.getElementById('${props.id}-text').textContent = '\u201c' + text + '\u201d';
-          document.getElementById('${props.id}-author').textContent = '— ' + author;
+          document.getElementById('${props.id}-text').textContent = '\\u201c' + data[0].q + '\\u201d';
+          document.getElementById('${props.id}-author').textContent = '— ' + data[0].a;
         } catch (e) {
-          document.getElementById('${props.id}-text').textContent = '"Stay hungry, stay foolish."';
+          document.getElementById('${props.id}-text').textContent = '\\u201cStay hungry, stay foolish.\\u201d';
           document.getElementById('${props.id}-author').textContent = '— Steve Jobs';
         }
       }
@@ -2258,7 +2472,7 @@ const WIDGETS = {
         <div class="dash-card-body" style="padding:0;overflow:hidden;display:flex;align-items:center;justify-content:center;background:var(--bg-tertiary);">
           ${props.imagePath 
             ? `<img src="${props.imagePath}" style="width:100%;height:100%;object-fit:contain;">`
-            : `<span style="color:var(--text-muted);font-size:12px;">🖼️ No image path</span>`
+            : `<span style="color:var(--text-muted);font-size:calc(12px * var(--font-scale, 1));">🖼️ No image path</span>`
           }
         </div>
       </div>`,
@@ -2291,7 +2505,7 @@ const WIDGETS = {
         </div>
         <div class="dash-card-body" style="padding:0;overflow:hidden;display:flex;align-items:center;justify-content:center;background:var(--bg-tertiary);">
           <img id="${props.id}-img" src="" style="width:100%;height:100%;object-fit:contain;display:none;">
-          <span id="${props.id}-placeholder" style="color:var(--text-muted);font-size:12px;">🎲 No images added</span>
+          <span id="${props.id}-placeholder" style="color:var(--text-muted);font-size:calc(12px * var(--font-scale, 1));">🎲 No images added</span>
         </div>
       </div>`,
     generateJs: (props) => {
@@ -2403,7 +2617,7 @@ const WIDGETS = {
         <div class="dash-card-body" style="padding:0;overflow:hidden;display:flex;align-items:center;justify-content:center;background:var(--bg-tertiary);">
           ${props.imageUrl 
             ? `<img src="${props.imageUrl}" style="width:100%;height:100%;object-fit:contain;">`
-            : `<span style="color:var(--text-muted);font-size:12px;">🌐 No image URL</span>`
+            : `<span style="color:var(--text-muted);font-size:calc(12px * var(--font-scale, 1));">🌐 No image URL</span>`
           }
         </div>
       </div>`,
@@ -2437,7 +2651,7 @@ const WIDGETS = {
           <span class="dash-card-title">🔗 ${props.title || 'Quick Links'}</span>
         </div>
         <div class="dash-card-body links-list" id="${props.id}-links">
-          ${(props.links || []).length === 0 ? '<span style="color:var(--text-muted);font-size:12px;">No links added</span>' : ''}
+          ${(props.links || []).length === 0 ? '<span style="color:var(--text-muted);font-size:calc(12px * var(--font-scale, 1));">No links added</span>' : ''}
         </div>
       </div>`,
     generateJs: (props) => {
@@ -2449,7 +2663,7 @@ const WIDGETS = {
         const container = document.getElementById('${props.id}-links');
         
         if (links.length === 0) {
-          container.innerHTML = '<span style="color:var(--text-muted);font-size:12px;">No links added</span>';
+          container.innerHTML = '<span style="color:var(--text-muted);font-size:calc(12px * var(--font-scale, 1));">No links added</span>';
           return;
         }
         
@@ -2582,7 +2796,7 @@ const WIDGETS = {
           <span class="dash-card-title">🌍 ${props.title || 'World Clock'}</span>
         </div>
         <div class="dash-card-body" id="${props.id}-clocks">
-          <div style="color:#8b949e;font-size:12px;">Loading times...</div>
+          <div style="color:#8b949e;font-size:calc(12px * var(--font-scale, 1));">Loading times...</div>
         </div>
       </div>`,
     generateJs: (props) => `
@@ -2656,11 +2870,11 @@ const WIDGETS = {
           display:inline-flex; align-items:center; gap:6px;
           padding:6px 10px; border-radius:6px;
           background:#21262d; color:#c9d1d9;
-          text-decoration:none; font-size:13px;
+          text-decoration:none; font-size:calc(13px * var(--font-scale, 1));
           transition: background .15s, color .15s;
         }
         .pages-menu-item:hover { background:#30363d; color:#58a6ff; }
-        .pages-menu-item .pages-menu-icon { font-size:15px; }
+        .pages-menu-item .pages-menu-icon { font-size:calc(15px * var(--font-scale, 1)); }
       </style>`,
     generateJs: (props) => `
       async function update_${props.id.replace(/-/g, '_')}() {
