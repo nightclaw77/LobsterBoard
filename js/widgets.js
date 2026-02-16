@@ -2715,6 +2715,55 @@ const WIDGETS = {
     `
   },
 
+  'nighthub-embed': {
+    name: '🌙 NightHub Embed',
+    icon: '🌙',
+    category: 'large',
+    description: 'Embeds the NightHub All-in-One Dashboard. Shows all NightSub services in cards.',
+    defaultWidth: 600,
+    defaultHeight: 400,
+    hasApiKey: false,
+    properties: {
+      title: '🌙 NightHub',
+      embedUrl: 'https://me.nightsub.ir',
+      autoRefresh: true,
+      refreshInterval: 60
+    },
+    preview: `<div style="background:linear-gradient(135deg,#1a1a2e,#16213e);height:100%;display:flex;align-items:center;justify-content:center;color:#ff6b9d;font-size:14px;text-align:center;padding:20px;">
+      🌙<br>NightHub<br>All-in-One Dashboard
+    </div>`,
+    generateHtml: (props) => `
+      <div class="dash-card" id="widget-${props.id}" style="height:100%;">
+        <div class="dash-card-head">
+          <span class="dash-card-title">🌙 ${props.title || 'NightHub'}</span>
+          <span style="font-size:10px;color:#8b949e;">${props.embedUrl || 'https://me.nightsub.ir'}</span>
+        </div>
+        <div class="dash-card-body" style="padding:0;overflow:hidden;background:#0a0a0f;">
+          <iframe src="${props.embedUrl || 'https://me.nightsub.ir'}" 
+            style="width:100%;height:calc(100% - 40px);border:none;" 
+            allow="clipboard-read; clipboard-write"
+            id="${props.id}-frame"></iframe>
+        </div>
+      </div>`,
+    generateJs: (props) => `
+      // NightHub Embed Widget: ${props.id}
+      // Auto-refresh every ${props.refreshInterval || 60} seconds
+      (function() {
+        var frame = document.getElementById('${props.id}-frame');
+        var refreshInterval = ${props.refreshInterval || 60} * 1000;
+        var autoRefresh = ${props.autoRefresh === false ? 'false' : 'true'};
+        
+        if (frame && autoRefresh) {
+          setInterval(function() {
+            var src = frame.src;
+            frame.src = '';
+            frame.src = src;
+          }, refreshInterval);
+        }
+      })();
+    `
+  },
+
   'rss-ticker': {
     name: 'RSS Ticker',
     icon: '📡',

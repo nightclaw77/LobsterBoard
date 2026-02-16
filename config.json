@@ -281,6 +281,20 @@
           }
         ]
       }
+    },
+    {
+      "id": "widget-nighthub-embed",
+      "type": "nighthub-embed",
+      "x": 20,
+      "y": 680,
+      "width": 800,
+      "height": 380,
+      "properties": {
+        "title": "🌙 NightHub Preview",
+        "embedUrl": "https://me.nighthub.ir",
+        "autoRefresh": true,
+        "refreshInterval": 120
+      }
     }
   ]
 }
