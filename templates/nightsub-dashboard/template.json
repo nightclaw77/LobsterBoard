@@ -1,0 +1,96 @@
+{
+  "id": "nightsub-dashboard",
+  "name": "🌙 NightSub Dashboard",
+  "description": "NightSub services dashboard with VPS monitoring, quick links, and NightHub embed. Complete all-in-one monitoring solution.",
+  "author": "NightWalker",
+  "tags": [
+    "NightSub",
+    "monitoring",
+    "dashboard",
+    "services",
+    "VPS"
+  ],
+  "canvasSize": "1920x1080",
+  "widgetCount": 14,
+  "widgetTypes": [
+    {
+      "type": "text-header",
+      "name": "Header",
+      "icon": "🌙",
+      "count": 1
+    },
+    {
+      "type": "horizontal-line",
+      "name": "Divider",
+      "icon": "➖",
+      "count": 3
+    },
+    {
+      "type": "clock",
+      "name": "Clock",
+      "icon": "🕐",
+      "count": 1
+    },
+    {
+      "type": "cpu-memory",
+      "name": "CPU/Memory",
+      "icon": "💻",
+      "count": 1
+    },
+    {
+      "type": "disk-usage",
+      "name": "Disk Usage",
+      "icon": "💾",
+      "count": 1
+    },
+    {
+      "type": "network-speed",
+      "name": "Network Speed",
+      "icon": "🌐",
+      "count": 1
+    },
+    {
+      "type": "uptime-monitor",
+      "name": "Service Status",
+      "icon": "📡",
+      "count": 1
+    },
+    {
+      "type": "quick-links",
+      "name": "Quick Links",
+      "icon": "🔗",
+      "count": 4
+    },
+    {
+      "type": "release",
+      "name": "GitHub Release",
+      "icon": "📦",
+      "count": 1
+    },
+    {
+      "type": "openclaw-release",
+      "name": "OpenClaw Release",
+      "icon": "🦞",
+      "count": 1
+    },
+    {
+      "type": "todo-list",
+      "name": "Todo List",
+      "icon": "📋",
+      "count": 1
+    },
+    {
+      "type": "nighthub-embed",
+      "name": "NightHub Embed",
+      "icon": "🌙",
+      "count": 1
+    }
+  ],
+  "requiresSetup": [
+    "VPS endpoints (cpu-memory, disk-usage, network-speed)",
+    "Update service URLs in uptime-monitor",
+    "Update quick-links with your actual URLs",
+    "Configure GitHub repo in release widget"
+  ],
+  "preview": "preview.png"
+}

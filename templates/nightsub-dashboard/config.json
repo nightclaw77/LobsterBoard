@@ -1,0 +1,258 @@
+{
+  "canvas": {
+    "width": 1920,
+    "height": 1080
+  },
+  "fontScale": 1.25,
+  "widgets": [
+    {
+      "id": "widget-header",
+      "type": "text-header",
+      "x": 20,
+      "y": 20,
+      "width": 400,
+      "height": 60,
+      "properties": {
+        "title": "🌙 NightSub Dashboard",
+        "showHeader": false,
+        "fontSize": 28,
+        "fontColor": "#ff6b9d",
+        "textAlign": "left",
+        "fontWeight": "bold"
+      }
+    },
+    {
+      "id": "widget-line1",
+      "type": "horizontal-line",
+      "x": 20,
+      "y": 90,
+      "width": 1880,
+      "height": 60,
+      "properties": {
+        "title": "",
+        "showHeader": false,
+        "lineColor": "#ff6b9d",
+        "lineThickness": 2
+      }
+    },
+    {
+      "id": "widget-clock",
+      "type": "clock",
+      "x": 20,
+      "y": 110,
+      "width": 180,
+      "height": 120,
+      "properties": {
+        "title": "Clock",
+        "timezone": "Asia/Tehran",
+        "format24h": true
+      }
+    },
+    {
+      "id": "widget-system",
+      "type": "cpu-memory",
+      "x": 220,
+      "y": 110,
+      "width": 200,
+      "height": 120,
+      "properties": {
+        "title": "VPS System",
+        "endpoint": "http://localhost:18888/api/system",
+        "refreshInterval": 5
+      }
+    },
+    {
+      "id": "widget-disk",
+      "type": "disk-usage",
+      "x": 440,
+      "y": 110,
+      "width": 180,
+      "height": 120,
+      "properties": {
+        "title": "Disk",
+        "path": "/",
+        "endpoint": "http://localhost:18888/api/disk",
+        "refreshInterval": 60
+      }
+    },
+    {
+      "id": "widget-network",
+      "type": "network-speed",
+      "x": 640,
+      "y": 110,
+      "width": 200,
+      "height": 120,
+      "properties": {
+        "title": "Network",
+        "endpoint": "http://localhost:18888/api/network",
+        "refreshInterval": 2
+      }
+    },
+    {
+      "id": "widget-uptime",
+      "type": "uptime-monitor",
+      "x": 860,
+      "y": 110,
+      "width": 300,
+      "height": 120,
+      "properties": {
+        "title": "Service Status",
+        "services": "dashboard.nightsub.ir;downloads.nightsub.ir;nightclaw.nightsub.ir;me.nightsub.ir",
+        "refreshInterval": 30
+      }
+    },
+    {
+      "id": "widget-line2",
+      "type": "horizontal-line",
+      "x": 20,
+      "y": 250,
+      "width": 1880,
+      "height": 60,
+      "properties": {
+        "title": "",
+        "showHeader": false,
+        "lineColor": "#30363d",
+        "lineThickness": 1
+      }
+    },
+    {
+      "id": "widget-quicklinks1",
+      "type": "quick-links",
+      "x": 20,
+      "y": 270,
+      "width": 280,
+      "height": 200,
+      "properties": {
+        "title": "🎯 Quick Access",
+        "columns": 1,
+        "links": [
+          {"name": "📊 Dashboard", "url": "https://dashboard.nightsub.ir"},
+          {"name": "🌐 Me", "url": "https://me.nightsub.ir"},
+          {"name": "⬇️ Downloads", "url": "https://downloads.nightsub.ir"}
+        ]
+      }
+    },
+    {
+      "id": "widget-quicklinks2",
+      "type": "quick-links",
+      "x": 320,
+      "y": 270,
+      "width": 280,
+      "height": 200,
+      "properties": {
+        "title": "🛠️ Tools",
+        "columns": 1,
+        "links": [
+          {"name": "📥 QBittorrent", "url": "https://downqb.nightsub.ir"},
+          {"name": "📁 Files", "url": "https://files.nightsub.ir"},
+          {"name": "📈 Trade", "url": "https://trade.nightsub.ir"}
+        ]
+      }
+    },
+    {
+      "id": "widget-quicklinks3",
+      "type": "quick-links",
+      "x": 620,
+      "y": 270,
+      "width": 280,
+      "height": 200,
+      "properties": {
+        "title": "🤖 AI",
+        "columns": 1,
+        "links": [
+          {"name": "🦞 NightClaw", "url": "https://nightclaw.nightsub.ir"}
+        ]
+      }
+    },
+    {
+      "id": "widget-github",
+      "type": "release",
+      "x": 920,
+      "y": 270,
+      "width": 250,
+      "height": 120,
+      "properties": {
+        "title": "NightHub Repo",
+        "repo": "nightclaw77/nighthub",
+        "currentVersion": "1.0.0",
+        "refreshInterval": 3600,
+        "showHeader": true
+      }
+    },
+    {
+      "id": "widget-openclaw",
+      "type": "openclaw-release",
+      "x": 1190,
+      "y": 270,
+      "width": 250,
+      "height": 120,
+      "properties": {
+        "title": "OpenClaw",
+        "openclawUrl": "https://openclaw.ai/",
+        "refreshInterval": 3600,
+        "showHeader": true
+      }
+    },
+    {
+      "id": "widget-todo",
+      "type": "todo-list",
+      "x": 1460,
+      "y": 270,
+      "width": 400,
+      "height": 250,
+      "properties": {
+        "title": "📋 Tasks",
+        "items": "Check dashboard, Update services, Review logs"
+      }
+    },
+    {
+      "id": "widget-line3",
+      "type": "horizontal-line",
+      "x": 20,
+      "y": 490,
+      "width": 1880,
+      "height": 60,
+      "properties": {
+        "title": "",
+        "showHeader": false,
+        "lineColor": "#30363d",
+        "lineThickness": 1
+      }
+    },
+    {
+      "id": "widget-links1",
+      "type": "quick-links",
+      "x": 20,
+      "y": 510,
+      "width": 450,
+      "height": 150,
+      "properties": {
+        "title": "🔗 All Services",
+        "columns": 3,
+        "links": [
+          {"name": "Dashboard", "url": "https://dashboard.nightsub.ir"},
+          {"name": "Downloads", "url": "https://downloads.nightsub.ir"},
+          {"name": "QBittorrent", "url": "https://downqb.nightsub.ir"},
+          {"name": "Files", "url": "https://files.nightsub.ir"},
+          {"name": "NightClaw", "url": "https://nightclaw.nightsub.ir"},
+          {"name": "Trade", "url": "https://trade.nightsub.ir"},
+          {"name": "Me Dashboard", "url": "https://me.nightsub.ir"}
+        ]
+      }
+    },
+    {
+      "id": "widget-nighthub-embed",
+      "type": "nighthub-embed",
+      "x": 20,
+      "y": 680,
+      "width": 800,
+      "height": 380,
+      "properties": {
+        "title": "🌙 NightHub Preview",
+        "embedUrl": "https://me.nightsub.ir",
+        "autoRefresh": true,
+        "refreshInterval": 120
+      }
+    }
+  ]
+}
